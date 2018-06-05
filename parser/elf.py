@@ -73,7 +73,7 @@ def find_elf_file(fn):
             open_files[fn] = elffile
         except (IOError, elftools.common.exceptions.ELFError):
             if fn not in reported:
-                print "Cannot open", fn
+                print(("Cannot open", fn))
             reported.add(fn)
             return None
 
@@ -136,5 +136,5 @@ def resolve_ip(filename, foffset, ip, need_line):
 
 if __name__ == '__main__':
     import sys
-    print resolve_addr(sys.argv[1], int(sys.argv[2], 16))
-    print resolve_line(sys.argv[1], int(sys.argv[2], 16))
+    print((resolve_addr(sys.argv[1], int(sys.argv[2], 16))))
+    print((resolve_line(sys.argv[1], int(sys.argv[2], 16))))

@@ -21,7 +21,8 @@
 # CPUINFO=... override /proc/cpuinfo file
 import sys
 import re
-from urllib2 import urlopen, URLError
+from urllib.request import urlopen
+from urllib.error import URLError
 import os
 import string
 from fnmatch import fnmatch
@@ -80,7 +81,7 @@ NUM_TRIES = 3
 
 def getfile(url, dir, fn):
     tries = 0
-    print "Downloading", url, "to", fn
+    print("Downloading", url, "to", fn)
     while True:
         try:
             f = urlopen(url)
@@ -89,10 +90,10 @@ def getfile(url, dir, fn):
             tries += 1
             if tries >= NUM_TRIES:
                 raise
-            print "retrying download"
+            print("retrying download")
             continue
         break
-    o = open(os.path.join(dir, fn), "w")
+    o = open(os.path.join(dir, fn), "wb")
     o.write(data)
     o.close()
     f.close()
@@ -108,7 +109,7 @@ def download(match, key=None, link=True):
             n = j.rstrip().split(",")
             if len(n) < 4:
                 if len(n) > 0:
-                    print "Cannot parse", n
+                    print("Cannot parse", n)
                 continue
             cpu, version, name, type = n
             if not fnmatch(cpu, match) or (key is not None and type not in key) or type.startswith("EventType"):
@@ -131,21 +132,21 @@ def download(match, key=None, link=True):
                 try:
                     os.symlink(fn, os.path.join(dir, lname))
                 except OSError as e:
-                    print >>sys.stderr, "Cannot link %s to %s:" % (name, lname), e
+                    print("Cannot link %s to %s:" % (name, lname), e, file=sys.stderr)
             found += 1
         models.close()
         getfile(urlpath + "/readme.txt", dir, "readme.txt")
     except URLError as e:
-        print >>sys.stderr, "Cannot access event server:", e
-        print >>sys.stderr, "If you need a proxy to access the internet please set it with:"
-        print >>sys.stderr, "\texport https_proxy=http://proxyname..."
-        print >>sys.stderr, "If you are not connected to the internet please run this on a connected system:"
-        print >>sys.stderr, "\tevent_download.py '%s'" % (match)
-        print >>sys.stderr, "and then copy ~/.cache/pmu-events to the system under test"
-        print >>sys.stderr, "To get events for all possible CPUs use:"
-        print >>sys.stderr, "\tevent_download.py -a"
+        print("Cannot access event server:", e, file=sys.stderr)
+        print("If you need a proxy to access the internet please set it with:", file=sys.stderr)
+        print("\texport https_proxy=http://proxyname...", file=sys.stderr)
+        print("If you are not connected to the internet please run this on a connected system:", file=sys.stderr)
+        print("\tevent_download.py '%s'" % (match), file=sys.stderr)
+        print("and then copy ~/.cache/pmu-events to the system under test", file=sys.stderr)
+        print("To get events for all possible CPUs use:", file=sys.stderr)
+        print("\tevent_download.py -a", file=sys.stderr)
     except OSError as e:
-        print >>sys.stderr, "Cannot write events file:", e
+        print("Cannot write events file:", e, file=sys.stderr)
     return found
 
 def download_current(link=False):
@@ -173,7 +174,7 @@ if __name__ == '__main__':
 
     cpustr = get_cpustr()
     if args.verbose or args.mine:
-        print "My CPU", cpustr
+        print("My CPU", cpustr)
     if args.mine:
         sys.exit(0)
     d = getdir()
@@ -187,8 +188,8 @@ if __name__ == '__main__':
             found += download(j, link=args.link)
 
     if found == 0:
-        print >>sys.stderr, "Nothing found"
+        print("Nothing found", file=sys.stderr)
 
     el = eventlist_name()
     if os.path.exists(el):
-        print "my event list", el
+        print("my event list", el)

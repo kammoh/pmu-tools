@@ -1,6 +1,8 @@
-#Base classes for different metrics
+# Base classes for different metrics
 
-print_error = lambda msg: False
+
+def print_error(msg): return False
+
 
 class MetricBase(object):
     # Derived classes can override these
@@ -17,22 +19,23 @@ class MetricBase(object):
 
     def __init__(self, **kwargs):
         self.errcount = 0
-        for k, v in kwargs.items():
+        for k, v in list(kwargs.items()):
             setattr(self, k, v)
 
     def compute(self, EV):
-         try:
-             self.val = self._compute(EV)
-             self.thresh = self.val > 0
-         except ZeroDivisionError:
-             print_error("{0} zero division".format(self.__class__.__name__))
-             self.errcount += 1
-             self.val = 0
-             self.thresh = False
-         return self.val
+        try:
+            self.val = self._compute(EV)
+            self.thresh = self.val > 0
+        except ZeroDivisionError:
+            print_error("{0} zero division".format(self.__class__.__name__))
+            self.errcount += 1
+            self.val = 0
+            self.thresh = False
+        return self.val
 
     def _compute(self, EV):
         raise NotImplementedError()
+
 
 class FrontendBound(MetricBase):
     level = 1
@@ -43,6 +46,7 @@ class FrontendBound(MetricBase):
             "This category reflects slots where the Frontend of the\n"
             "processor undersupplies its Backend.")
     metricgroup = ['TopDownL1']
+
 
 class FrontendLatency(MetricBase):
     level = 2
@@ -63,6 +67,7 @@ class FrontendLatency(MetricBase):
     server = False
     metricgroup = ['Frontend_Bound', 'TopDownL2']
 
+
 class BadSpeculation(MetricBase):
     level = 1
     name = "Bad_Speculation"
@@ -78,6 +83,7 @@ class BadSpeculation(MetricBase):
             "category. Incorrect data speculation followed by Memory\n"
             "Ordering Nukes is another example.")
     metricgroup = ['Bad_Speculation', 'TopDownL1']
+
 
 class Retiring(MetricBase):
     level = 1
@@ -102,6 +108,7 @@ class Retiring(MetricBase):
             "improving the performance.")
     metricgroup = ['TopDownL1']
 
+
 class BackendBound(MetricBase):
     level = 1
     name = "Backend_Bound"
@@ -121,6 +128,7 @@ class BackendBound(MetricBase):
             "Bound.")
     metricgroup = ['TopDownL1']
 
+
 class ICacheMisses(MetricBase):
     level = 3
     name = "ICache Misses"
@@ -132,6 +140,7 @@ class ICacheMisses(MetricBase):
             "Guided Optimization (PGO) can reduce i-cache misses through\n"
             "improved hot code layout.")
     metricgroup = ['Frontend_Latency']
+
 
 class ITLBMisses(MetricBase):
     level = 3
@@ -149,6 +158,7 @@ class ITLBMisses(MetricBase):
             "applications-2/\n")
     metricgroup = ['Frontend_Latency', 'TLB']
 
+
 class BranchResteers(MetricBase):
     level = 3
     name = "Branch_Resteers"
@@ -162,6 +172,7 @@ class BranchResteers(MetricBase):
             "categorized under Branch Resteers. Note the value of this\n"
             "node may overlap with its siblings.")
     metricgroup = ['Bad_Speculation', 'Frontend_Latency']
+
 
 class MSSwitches(MetricBase):
     level = 3
@@ -183,6 +194,7 @@ class MSSwitches(MetricBase):
             "when dealing with Denormals.")
     metricgroup = ['Frontend_Latency', 'Microcode_Sequencer']
 
+
 class IFetchLine(MetricBase):
     name = "IFetchLine"
     domain = "Metric"
@@ -191,4 +203,3 @@ class IFetchLine(MetricBase):
             "This metric represents cycles fraction the fetch stalls\n"
             "due to an instruction cache miss.")
     metricgroup = []
-

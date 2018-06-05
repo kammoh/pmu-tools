@@ -72,6 +72,7 @@ exists_cache = dict()
 topology = None
 file_exists = dict()
 
+
 def file_exists(s):
     if s in exists_cache:
         return exists_cache[s]
@@ -83,15 +84,17 @@ def file_exists(s):
             try:
                 topology = set([x.strip() for x in open(top).readlines()])
             except OSError:
-                print >>sys.stderr, "Cannot open", top
+                print("Cannot open", top, file=sys.stderr)
     if s in topology:
         return True
     found = os.path.exists(s)
     exists_cache[s] = found
     return found
 
+
 def has_format(s):
     return file_exists("/sys/devices/cpu/format/" + s)
+
 
 class PerfVersion:
     def __init__(self):
@@ -100,9 +103,9 @@ class PerfVersion:
         if not perf:
             perf = "perf"
         try:
-            version = subprocess.Popen([perf, "--version"], stdout=subprocess.PIPE).communicate()[0]
+            version = subprocess.Popen([perf, "--version"], stdout=subprocess.PIPE).communicate()[0].decode('utf-8')
         except OSError:
-            print "Cannot run", perf
+            print("Cannot run", perf)
             version = ""
         m = re.match(r"perf version (\d+)\.(\d+)\.", version)
         if m:
@@ -111,30 +114,33 @@ class PerfVersion:
             if re.match("[0-9]+", minor):
                 minor = int(minor, 10)
             if re.match("[0-9]+", major) and int(major) > 3:
-                minor = 100 # infinity
+                minor = 100  # infinity
 
         self.direct = os.getenv("DIRECT_MSR") or minor < 4
         self.offcore = has_format("offcore_rsp") and not self.direct
         self.ldlat = has_format("ldlat") and not self.direct
         self.has_name = minor >= 4
 
+
 version = PerfVersion()
+
 
 class MSR:
     def __init__(self):
         self.reg = {}
 
-    def writemsr(self, msrnum, val, print_only = False):
-        print "msr %x = %x" % (msrnum, val, )
+    def writemsr(self, msrnum, val, print_only=False):
+        print("msr %x = %x" % (msrnum, val, ))
         if print_only:
             return
         msrmod.writemsr(msrnum, val)
 
-    def checked_writemsr(self, msr, val, print_only = False):
+    def checked_writemsr(self, msr, val, print_only=False):
         if msr in self.reg:
             sys.exit("Multiple events use same register")
         self.writemsr(msr, val, print_only)
         self.reg[msr] = 1
+
 
 qual_map = (
     ("amt1", "any=1", EVENTSEL_ANY, ""),
@@ -166,6 +172,8 @@ uncore_map = (
     (r"c(?:mask=)?(0x[0-9a-fA-F]+|[0-9]+)", "cmask="))
 
 # newe gets modified
+
+
 def convert_extra(extra, val, newe):
     nextra = ""
     while extra:
@@ -201,9 +209,10 @@ def convert_extra(extra, val, newe):
             nextra += extra[0]
             extra = extra[1:]
             continue
-        print >>sys.stderr, "bad event qualifier", extra
+        print("bad event qualifier", extra, file=sys.stderr)
         break
     return nextra, val
+
 
 class Event:
     def __init__(self, name, val, desc):
@@ -228,7 +237,8 @@ class Event:
             if name:
                 e += ",name=" + name
             elif not noname:
-                e += ",name=%s" % (self.name.replace(".", "_").replace(":", "_").replace("=", "_"))
+                e += ",name=%s" % (self.name.replace(".",
+                                                     "_").replace(":", "_").replace("=", "_"))
         if period and self.period and not ",period=" in e:
             e += ",period=%d" % self.period
         return e
@@ -249,8 +259,10 @@ class Event:
                 ename += ":" + extra
             # XXX should error for extras that don't fit into raw
         else:
-            ename = "cpu/%s/" % (self.output_newstyle(extra=",".join(newe), noname=noname, period=period, name=name)) + extra
+            ename = "cpu/%s/" % (self.output_newstyle(extra=",".join(newe),
+                                                      noname=noname, period=period, name=name)) + extra
         return ename
+
 
 box_to_perf = {
     "cbo": "cbox",
@@ -260,11 +272,13 @@ box_to_perf = {
 
 box_cache = dict()
 
+
 def box_exists(box):
     n = "/sys/devices/uncore_%s" % (box)
     if n not in box_cache:
         box_cache[n] = file_exists(n)
     return box_cache[n]
+
 
 def int_or_zero(row, name):
     if name in row:
@@ -275,12 +289,14 @@ def int_or_zero(row, name):
         return int(row[name])
     return 0
 
+
 uncore_units = {
     "imph-u": "arb",
     "kti ll": "upi",
     "m3kti": "m3upi",
     "upi ll": "upi",
 }
+
 
 class UncoreEvent:
     def __init__(self, name, row):
@@ -311,7 +327,7 @@ class UncoreEvent:
             e.unit = box_to_perf[e.unit]
         e.msr = None
         e.overflow = 0
-        e.counter = "1" # dummy for toplev
+        e.counter = "1"  # dummy for toplev
         e.newextra = ""
         if 'Errata' in row:
             e.errata = row['Errata']
@@ -349,7 +365,7 @@ class UncoreEvent:
                 flags += ","
             flags += e.newextra
 
-	one_unit = False
+        one_unit = False
 
         # xxx subctr, occ_sel, filters
         if flags:
@@ -357,11 +373,12 @@ class UncoreEvent:
                 match, repl = j[0], j[1]
                 m = re.match(match, flags)
                 if m:
-		    if repl == "":
-			if match.startswith("one_unit"):
-			    one_unit = True
-		    elif len(j) > 2:
-                        o += "," + repl + ("%#x" % (int(m.group(1), 0) << j[2]))
+                    if repl == "":
+                        if match.startswith("one_unit"):
+                            one_unit = True
+                    elif len(j) > 2:
+                        o += "," + repl + ("%#x" %
+                                           (int(m.group(1), 0) << j[2]))
                     else:
                         o += "," + repl + m.group(1)
                     flags = flags[m.end():]
@@ -370,7 +387,7 @@ class UncoreEvent:
                 if flags[0:1] == ":":
                     flags = flags[1:]
             if flags != "":
-                print >>sys.stderr, "Uncore cannot parse", flags
+                print("Uncore cannot parse", flags, file=sys.stderr)
         if version.has_name and not noname:
             if name == "":
                 name = e.name.replace(".", "_")
@@ -382,9 +399,10 @@ class UncoreEvent:
         # explode boxes if needed
         def box_name(n):
             return "%s_%d" % (e.unit, n)
+
         def box_n_exists(n):
-	    if one_unit and n > 0:
-		return False
+            if one_unit and n > 0:
+                return False
             return box_exists(box_name(n))
         if not box_exists(e.unit) and box_n_exists(0):
             return ",".join(["uncore_" + box_name(x) + o.replace("_NUM", "_%d" % (x)) for x in
@@ -392,6 +410,7 @@ class UncoreEvent:
         return "uncore_%s%s" % (e.unit, o.replace("_NUM", ""))
 
     output = output_newstyle
+
 
 def ffs(flag):
     assert flag != 0
@@ -402,11 +421,13 @@ def ffs(flag):
         j += 1
     return j
 
-perf_qual = "kuhGHSD" # without pebs
+
+perf_qual = "kuhGHSD"  # without pebs
+
 
 def extra_set(e):
-    return set(map(lambda x: x[0],
-        re.findall(r"(p+|" + "|".join([x[0] for x in qual_map + qualval_map + uncore_map]) + "|[" + perf_qual + "])", e)))
+    return set([x[0] for x in re.findall(r"(p+|" + "|".join([x[0] for x in qual_map + qualval_map + uncore_map]) + "|[" + perf_qual + "])", e)])
+
 
 def merge_extra(a, b):
     m = a | b
@@ -417,13 +438,16 @@ def merge_extra(a, b):
     m = m - set([':'])
     return m
 
+
 def print_event(name, desc, f, human, wrap):
-    desc = "".join([y for y in desc if y < chr(127)])
-    print >>f,"  %-42s" % (name,),
+    #desc = "".join([y for y in desc if y < chr(127)])
+    assert(isinstance(desc,str))
+    print("  %-42s" % (name,), end=' ', file=f)
     if human:
-        print >>f, "\n%s" % (wrap.fill(desc),)
+        print("\n%s" % (wrap.fill(desc),), file=f)
     else:
-        print >>f, " [%s]" % (desc,)
+        print(" [%s]" % (desc,), file=f)
+
 
 def uncore_exists(box, postfix=""):
     if file_exists("/sys/devices/uncore_" + box + postfix):
@@ -432,21 +456,26 @@ def uncore_exists(box, postfix=""):
         return True
     return False
 
+
 missing_boxes = set()
+
 
 def check_uncore_event(e):
     if uncore_exists(e.unit):
         if e.cmask and not uncore_exists(e.unit, "/format/cmask"):
-            print >>sys.stderr, "Uncore unit", e.unit, "missing cmask for", e.name
+            print("Uncore unit", e.unit, "missing cmask for",
+                  e.name, file=sys.stderr)
             return None
         if e.umask and not uncore_exists(e.unit, "/format/umask"):
-            print >>sys.stderr, "Uncore unit", e.unit, "missing umask for", e.name
+            print("Uncore unit", e.unit, "missing umask for",
+                  e.name, file=sys.stderr)
             return None
         return e
     if e.unit not in missing_boxes:
-        print >>sys.stderr, "Uncore unit", e.unit, "missing"
+        print("Uncore unit", e.unit, "missing", file=sys.stderr)
         missing_boxes.add(e.unit)
     return None
+
 
 fixed_counters = {
     "inst_retired.any": (0xc0, 0, 0),
@@ -454,11 +483,13 @@ fixed_counters = {
     "cpu_clk_unhalted.thread_any": (0x3c, 0, 1),
 }
 
+
 def update_ename(ev, name):
     if ev:
         ev = copy.deepcopy(ev)
         ev.name = name
     return ev
+
 
 class EmapNativeJSON(object):
     """Read an event table."""
@@ -476,15 +507,18 @@ class EmapNativeJSON(object):
 
     def add_event(self, e):
         self.events[e.name] = e
-        self.perf_events[e.name.replace('.', '_')] = e # workaround for perf-style naming
+        # workaround for perf-style naming
+        self.perf_events[e.name.replace('.', '_')] = e
         self.codes[e.val] = e
         self.desc[e.name] = e.desc
 
     def read_table(self, r, m):
         for row in r:
-            get = lambda (x): row[m[x]]
-            gethex = lambda (x): int(get(x).split(",")[0], 16)
-            getdec = lambda (x): int(get(x), 10)
+            def get(x): return row[m[x]]
+
+            def gethex(x): return int(get(x).split(",")[0], 16)
+
+            def getdec(x): return int(get(x), 10)
 
             name = get('name').lower().rstrip()
             code = gethex('code')
@@ -509,19 +543,19 @@ class EmapNativeJSON(object):
             d = get('desc')
             if d is None:
                 d = ''
+            #d = d.encode('utf-8')
             d = d.strip()
-            try:
-                d = d.encode('utf-8')
-            except UnicodeDecodeError:
-                pass
+            #try:
+            #except UnicodeDecodeError:
+            #    pass
             e = Event(name, val, d)
             counter = get('counter')
             e.pname = "r%x" % (val,)
             e.newextra = ""
-            if other & ((1<<16)|(1<<17)):
-                if other & (1<<16):
+            if other & ((1 << 16) | (1 << 17)):
+                if other & (1 << 16):
                     e.extra += "u"
-                if other & (1<<17):
+                if other & (1 << 17):
                     e.extra += "k"
             if ('msr_index' in m and m['msr_index'] in row
                     and get('msr_index') and get('msr_value')):
@@ -539,7 +573,7 @@ class EmapNativeJSON(object):
                     e.msr = msrnum
             if 'overflow' in m and m['overflow'] in row:
                 e.overflow = get('overflow')
-                #if e.overflow == "0":
+                # if e.overflow == "0":
                 #    print >>sys.stderr, "Warning: %s has no overflow value" % (name,)
             else:
                 e.overflow = None
@@ -549,22 +583,24 @@ class EmapNativeJSON(object):
                     e.extra += pebs_enable
                     d += " (Uses PEBS)"
                 else:
-                    d = d.replace("(Precise Event)","") + " (Supports PEBS)"
+                    d = d.replace("(Precise Event)", "") + " (Supports PEBS)"
             e.errata = None
             try:
                 if get('errata') != "null":
                     try:
-                        d += " Errata: " + get('errata')
+                        d += ' Errata: ' + get('errata')
                         e.errata = get('errata')
                     except UnicodeDecodeError:
                         pass
             except KeyError:
                 pass
-            e.desc = d
+            
+            #e.desc = d.decode('utf-8')
             e.counter = get('counter')
             for (flag, name) in extra_flags:
                 if val & flag:
-                    e.newextra += ",%s=%d" % (name, (val & flag) >> ffs(flag), )
+                    e.newextra += ",%s=%d" % (name,
+                                              (val & flag) >> ffs(flag), )
             e.period = int(get('sav')) if m['sav'] in row else 0
             self.add_event(e)
 
@@ -597,7 +633,7 @@ class EmapNativeJSON(object):
         elif e.endswith("_ps"):
             return update_ename(self.getevent(e[:-3] + ":p" + extra), e)
         elif e.endswith("_0") or e.endswith("_1"):
-            return update_ename(self.getevent(e.replace("_0","").replace("_1","") + edelim + extra), e)
+            return update_ename(self.getevent(e.replace("_0", "").replace("_1", "") + edelim + extra), e)
         elif e.startswith("offcore") and (e + "_0") in self.events:
             return update_ename(self.getevent(e + "_0" + edelim + extra), e)
         elif e in self.uncore_events:
@@ -644,33 +680,33 @@ class EmapNativeJSON(object):
     def read_events(self, name):
         """Read JSON normal events table."""
         mapping = {
-            'name': u'EventName',
-            'code': u'EventCode',
-            'umask': u'UMask',
-            'msr_index': u'MSRIndex',
-            'msr_value': u'MSRValue',
-            'cmask': u'CounterMask',
-            'invert': u'Invert',
-            'any': u'AnyThread',
-            'edge': u'EdgeDetect',
-            'desc': u'PublicDescription',
-            'pebs': u'PEBS',
-            'counter': u'Counter',
-            'overflow': u'SampleAfterValue',
-            'errata': u'Errata',
-            'sav': u'SampleAfterValue',
-            'other': u'Other',
+            'name': 'EventName',
+            'code': 'EventCode',
+            'umask': 'UMask',
+            'msr_index': 'MSRIndex',
+            'msr_value': 'MSRValue',
+            'cmask': 'CounterMask',
+            'invert': 'Invert',
+            'any': 'AnyThread',
+            'edge': 'EdgeDetect',
+            'desc': 'PublicDescription',
+            'pebs': 'PEBS',
+            'counter': 'Counter',
+            'overflow': 'SampleAfterValue',
+            'errata': 'Errata',
+            'sav': 'SampleAfterValue',
+            'other': 'Other',
         }
         if name.find("JKT") >= 0 or name.find("Jaketown") >= 0:
             self.latego = True
         try:
             data = json.load(open(name, 'rb'))
         except ValueError as e:
-            print >>sys.stderr, "Cannot open", name + ":", e.message
+            print("Cannot open", name + ":", e.message, file=sys.stderr)
             self.error = True
             return
-        if u'PublicDescription' not in data[0]:
-            mapping['desc'] = u'BriefDescription'
+        if 'PublicDescription' not in data[0]:
+            mapping['desc'] = 'BriefDescription'
         self.read_table(data, mapping)
 
     def add_offcore(self, name):
@@ -691,10 +727,12 @@ class EmapNativeJSON(object):
         responses = []
 
         for row in data:
-            if row[u"MATRIX_REQUEST"].upper() != "NULL":
-                requests.append((row[u"MATRIX_REQUEST"], row[u"MATRIX_VALUE"], row[u"DESCRIPTION"]))
-            if row[u"MATRIX_RESPONSE"].upper() != "NULL":
-                responses.append((row[u"MATRIX_RESPONSE"], row[u"MATRIX_VALUE"], row[u"DESCRIPTION"]))
+            if row["MATRIX_REQUEST"].upper() != "NULL":
+                requests.append(
+                    (row["MATRIX_REQUEST"], row["MATRIX_VALUE"], row["DESCRIPTION"]))
+            if row["MATRIX_RESPONSE"].upper() != "NULL":
+                responses.append(
+                    (row["MATRIX_RESPONSE"], row["MATRIX_VALUE"], row["DESCRIPTION"]))
 
         def create_event(req_name, req_val, req_desc, res_name, res_val, res_desc):
             oe = copy.deepcopy(offcore_response)
@@ -721,19 +759,22 @@ class EmapNativeJSON(object):
             except UnicodeEncodeError:
                 pass
 
+
 def json_with_extra(el):
     name = event_download.eventlist_name(el, "core")
     emap = EmapNativeJSON(name)
     if not emap or emap.error:
-        print >>sys.stderr, "parsing", name, "failed"
+        print("parsing", name, "failed", file=sys.stderr)
         return None
     if experimental:
         try:
-            emap.read_events(event_download.eventlist_name(el, "core experimental"))
+            emap.read_events(event_download.eventlist_name(
+                el, "core experimental"))
         except IOError:
             pass
     add_extra_env(emap, el)
     return emap
+
 
 def add_extra_env(emap, el):
     try:
@@ -750,7 +791,7 @@ def add_extra_env(emap, el):
                 if os.path.exists(oc):
                     emap.add_offcore(oc)
     except IOError:
-        print >>sys.stderr, "Cannot open", oc
+        print("Cannot open", oc, file=sys.stderr)
     try:
         uc = os.getenv("UNCORE")
         if uc:
@@ -765,7 +806,7 @@ def add_extra_env(emap, el):
                 if os.path.exists(uc):
                     emap.add_uncore(uc)
     except IOError:
-        print >>sys.stderr, "Cannot open", uc
+        print("Cannot open", uc, file=sys.stderr)
     try:
         e2 = os.getenv("EVENTMAP2")
         if e2:
@@ -773,15 +814,16 @@ def add_extra_env(emap, el):
             emap.read_events(e2)
             # don't try to download for now
     except IOError:
-        print >>sys.stderr, "Cannot open", e2
+        print("Cannot open", e2, file=sys.stderr)
     try:
         u2 = os.getenv("UNCORE2")
         if u2:
             u2 = canon_emapvar(u2, "uncore")
             emap.add_uncore(u2, True)
     except IOError:
-        print >>sys.stderr, "Cannot open", u2
+        print("Cannot open", u2, file=sys.stderr)
     return emap
+
 
 def canon_emapvar(el, typ):
     if ("*" in el or "." in el or "_" in el) and not "/" in el and not file_exists(el):
@@ -794,6 +836,7 @@ def canon_emapvar(el, typ):
                 l = [x for x in l if x.find(typ) >= 0]
             el = l[0]
     return el
+
 
 def find_emap():
     """Search and read a perfmon event map.
@@ -840,14 +883,15 @@ def find_emap():
         pass
     return None
 
+
 def process_events(event, print_only, period):
     if emap is None:
         return event, False
     overflow = None
     # replace inner commas so we can split events
     event = re.sub(r"([a-z][a-z0-9]+/)([^/]+)/",
-            lambda m: m.group(1) + m.group(2).replace(",", "#") + "/",
-            event)
+                   lambda m: m.group(1) + m.group(2).replace(",", "#") + "/",
+                   event)
     el = event.split(",")
     nl = []
     group_index = 0
@@ -871,7 +915,8 @@ def process_events(event, print_only, period):
             ev = emap.getevent(m.group(2))
             end = m.group(3) + "/"
             if ev:
-                qual = "".join(merge_extra(extra_set(ev.extra), extra_set(m.group(4))))
+                qual = "".join(merge_extra(
+                    extra_set(ev.extra), extra_set(m.group(4))))
                 end += qual
                 i = ev.output_newstyle(period=period)
             else:
@@ -897,6 +942,7 @@ def process_events(event, print_only, period):
 
     return str.join(',', nl), overflow
 
+
 def getarg(i, cmd):
     if sys.argv[i][2:] == '' or sys.argv[i][:2] == '--':
         cmd.append(sys.argv[i])
@@ -910,6 +956,7 @@ def getarg(i, cmd):
         prefix = sys.argv[i][:2]
     return arg, i, prefix
 
+
 def process_args():
     perf = os.getenv("PERF")
     if not perf:
@@ -918,14 +965,14 @@ def process_args():
 
     overflow = None
     print_only = False
-    never, no, yes = range(3)
+    never, no, yes = list(range(3))
     record = no
     i = 1
     while i < len(sys.argv):
         if sys.argv[i] == "--print":
             print_only = True
         elif sys.argv[i] == "--force-download":
-           pass
+            pass
         elif sys.argv[i] == "--experimental":
             pass
         elif sys.argv[i] == "--no-period":
@@ -942,8 +989,7 @@ def process_args():
             oarg, i, prefix = getarg(i, cmd)
             if oarg == "default":
                 if overflow is None:
-                    print >>sys.stderr,"""
-Specify the -e events before -c default or event has no overflow field."""
+                    print("""Specify the -e events before -c default or event has no overflow field.""", file=sys.stderr)
                     sys.exit(1)
                 cmd.append(prefix + overflow)
             else:
@@ -951,20 +997,22 @@ Specify the -e events before -c default or event has no overflow field."""
         else:
             cmd.append(sys.argv[i])
         i += 1
-    print " ".join(map(pipes.quote, cmd))
+    print(" ".join(map(pipes.quote, cmd)))
     if print_only:
         sys.exit(0)
     return cmd
 
+
 def get_pager():
     f = sys.stdout
-    if f.isatty():
-        try:
-            sp = subprocess.Popen(["less", "-F"], stdin=subprocess.PIPE)
-            return sp.stdin, sp
-        except OSError:
-            f = sys.stdout
+    #if f.isatty():
+    #    try:
+    #        sp = subprocess.Popen(["less", "-F"], stdin=subprocess.PIPE)
+    #        return sp.stdin, sp
+    #    except OSError:
+    #        f = sys.stdout
     return f, None
+
 
 def perf_cmd(cmd):
     if emap is None:
@@ -974,7 +1022,7 @@ def perf_cmd(cmd):
         try:
             l = subprocess.Popen(cmd, stdout=pager)
             l.wait()
-            print >>pager
+            print(file=pager)
             emap.dumpevents(pager, proc is not None)
             if proc:
                 pager.close()
@@ -984,7 +1032,7 @@ def perf_cmd(cmd):
     elif len(sys.argv) >= 2 and (sys.argv[1] == "report" or sys.argv[1] == "stat"):
         direct = version.has_name
         if not direct:
-            for w in sys.argv:
+            for w in sys.argv: 
                 if w == "--tui":
                     direct = True
                     break
@@ -996,18 +1044,20 @@ def perf_cmd(cmd):
             pipe = subprocess.Popen(cmd,
                                     stdout=subprocess.PIPE,
                                     stderr=subprocess.STDOUT).stdout
-            raw = lambda e: " " + emap.getraw(int(e.group(1), 16))
+
+            def raw(e): return " " + emap.getraw(int(e.group(1), 16))
             for i in pipe:
                 i = re.sub("[rR]aw 0x([0-9a-f]{4,})", raw, i)
                 i = re.sub("r([0-9a-f]{4,})", raw, i)
                 i = re.sub("(cpu/.*?/)", lambda e: emap.getperf(e.group(1)), i)
-                print i,
+                print(i, end=' ')
         except IOError:
             pass
         pipe.close()
         latego.cleanup()
     else:
         sys.exit(subprocess.call(cmd))
+
 
 if __name__ == '__main__':
     for j in sys.argv:
@@ -1017,10 +1067,11 @@ if __name__ == '__main__':
             experimental = True
     emap = find_emap()
     if not emap:
-        print >>sys.stderr, "Do not recognize CPU or cannot find CPU map file."
+        print("Do not recognize CPU or cannot find CPU map file.", file=sys.stderr)
     msr = MSR()
     cmd = process_args()
     try:
         perf_cmd(cmd)
     except KeyboardInterrupt:
+        print("Interrupted...\n")
         pass

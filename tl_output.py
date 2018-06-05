@@ -17,8 +17,10 @@ import csv
 import re
 from tl_stat import format_valstat, combine_valstat, isnan
 
+
 class Output:
     """Abstract base class for Output classes."""
+
     def __init__(self, logfile, version):
         self.logf = logfile
         self.printed_descs = set()
@@ -45,7 +47,8 @@ class Output:
             self.printed_descs.add(desc)
         if not area:
             area = ""
-        self.show(timestamp, title, area, name, val, remark, desc, sample, valstat, bn)
+        self.show(timestamp, title, area, name, val,
+                  remark, desc, sample, valstat, bn)
 
     def ratio(self, area, name, l, timestamp, remark, desc, title, sample, valstat, bn):
         self.item(area, name, "%13.2f" % (100.0 * l), timestamp, "%" + remark, desc, title,
@@ -58,8 +61,10 @@ class Output:
     def flush(self):
         pass
 
+
 class OutputHuman(Output):
     """Generate human readable single-column output."""
+
     def __init__(self, logfile, args, version, cpu):
         Output.__init__(self, logfile, version)
         try:
@@ -72,13 +77,13 @@ class OutputHuman(Output):
 
     def set_cpus(self, cpus):
         if len(cpus) > 0:
-            self.titlelen = max(map(len, cpus)) + 1
+            self.titlelen = max(list(map(len, cpus))) + 1
 
     def print_desc(self, desc, sample):
         if desc and not self.args.no_desc:
-            print >>self.logf, "\t" + desc
+            print("\t" + desc, file=self.logf)
         if desc and sample and not self.args.no_desc:
-            print >>self.logf, "\t" + "Sampling events: ", sample
+            print("\t" + "Sampling events: ", sample, file=self.logf)
 
     def print_timestamp(self, timestamp):
         if timestamp:
@@ -126,13 +131,16 @@ class OutputHuman(Output):
         self.item(area, name, val, timestamp, unit, desc, title,
                   None, valstat, "")
 
+
 def convert_ts(ts):
     if isnan(ts):
         return "SUMMARY"
     return ts
 
+
 class OutputColumns(OutputHuman):
     """Human-readable output data in per-cpu columns."""
+
     def __init__(self, logfile, args, version, cpu):
         OutputHuman.__init__(self, logfile, args, version, cpu)
         self.nodes = dict()
@@ -145,7 +153,8 @@ class OutputColumns(OutputHuman):
 
     def show(self, timestamp, title, area, hdr, s, remark, desc, sample, valstat, bn):
         if self.args.single_thread:
-            OutputHuman.show(self, timestamp, title, area, hdr, s, remark, desc, sample, valstat, bn)
+            OutputHuman.show(self, timestamp, title, area, hdr,
+                             s, remark, desc, sample, valstat, bn)
             return
         self.timestamp = timestamp
         key = (area, hdr)
@@ -169,7 +178,7 @@ class OutputColumns(OutputHuman):
             write("\n")
             self.printed_header = True
 
-        for key in sorted(sorted(self.nodes.keys(), key=lambda x: x[1]), key=lambda x: x[0] == ""):
+        for key in sorted(sorted(list(self.nodes.keys()), key=lambda x: x[1]), key=lambda x: x[0] == ""):
             node = self.nodes[key]
             desc = None
             sample = None
@@ -185,7 +194,7 @@ class OutputColumns(OutputHuman):
                     val, desc, sample, remark, valstat, bn = cpu
                     if bn:
                         val += "*"
-                    if remark in ("above", "below", "Metric", "CoreMetric", "CoreClocks"): # XXX
+                    if remark in ("above", "below", "Metric", "CoreMetric", "CoreClocks"):  # XXX
                         remark = ""
                     if valstat:
                         vlist.append(valstat)
@@ -198,6 +207,7 @@ class OutputColumns(OutputHuman):
             write("\n")
             self.print_desc(desc, sample)
         self.nodes = dict()
+
 
 class OutputColumnsCSV(OutputColumns):
     """Columns output in CSV mode."""
@@ -221,9 +231,10 @@ class OutputColumnsCSV(OutputColumns):
         cpunames = sorted(self.cpunames)
         if not self.printed_header:
             ts = ["Timestamp"] if self.timestamp else []
-            self.writer.writerow(ts + ["Area", "Node"] + cpunames + ["Description", "Sample", "Stddev", "Multiplex"])
+            self.writer.writerow(
+                ts + ["Area", "Node"] + cpunames + ["Description", "Sample", "Stddev", "Multiplex"])
             self.printed_header = True
-        for key in sorted(sorted(self.nodes.keys(), key=lambda x: x[1]), key=lambda x: x[0] == ""):
+        for key in sorted(sorted(list(self.nodes.keys()), key=lambda x: x[1]), key=lambda x: x[0] == ""):
             node = self.nodes[key]
             ts = [convert_ts(self.timestamp)] if self.timestamp else []
             l = ts + [key[0], key[1]]
@@ -253,8 +264,10 @@ class OutputColumnsCSV(OutputColumns):
             self.writer.writerow(l)
         self.nodes = dict()
 
+
 class OutputCSV(Output):
     """Output data in CSV format."""
+
     def __init__(self, logfile, sep, args, version, cpu):
         Output.__init__(self, logfile, version)
         self.writer = csv.writer(self.logf, delimiter=sep)
@@ -271,5 +284,7 @@ class OutputCSV(Output):
         if title:
             l.append(title)
         stddev = valstat.stddev if (valstat and valstat.stddev) else ""
-        multiplex = valstat.multiplex if (valstat and valstat.multiplex == valstat.multiplex) else ""
-        self.writer.writerow(l + [hdr, s.strip(), remark, desc, sample, stddev, multiplex, bn])
+        multiplex = valstat.multiplex if (
+            valstat and valstat.multiplex == valstat.multiplex) else ""
+        self.writer.writerow(
+            l + [hdr, s.strip(), remark, desc, sample, stddev, multiplex, bn])

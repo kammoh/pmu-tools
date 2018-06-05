@@ -16,32 +16,32 @@ for l in sys.stdin:
                 if l[2:] in skip_sections:
                     skip = True
                     continue
-                print "[%s]" % (l[2:])
+                print("[%s]" % (l[2:]))
                 continue
         elif l == "" and not skip:
-                print ".PP"
+                print(".PP")
                 tabmode = False
                 continue
         if skip:
                 continue
         if l and l[0] == '\t' and l[1:]:
                 if not tabmode:
-                        print ".nf\n.sp"
+                        print(".nf\n.sp")
                         tabmode = True
                 #print ".I ",
         elif tabmode:
                 after = ".fi"
                 tabmode = False
         if l and l[0] == '-':
-                print ".TP"
+                print(".TP")
                 l = l[2:]
         if l and l[0:2] == "**":
-                print ".B ",
+                print(".B ", end=' ')
                 l = l.replace("**","")
         if l and l[0] == '[':
                 m = re.match(r"\[(.*)\]\s*\((.*)\)(.*)", l)
                 #l = '.URL "%s" "%s"\n%s' % (m.group(2), m.group(1), m.group(3))
                 l = m.group(2) + " " + m.group(1) + " " + m.group(3)
-        print l
+        print(l)
         if after:
-                print after
+                print(after)

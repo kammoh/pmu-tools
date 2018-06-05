@@ -17,12 +17,15 @@ import argparse
 import csv_formats
 import collections
 
-ap = argparse.ArgumentParser(description=
-'Normalize CSV data from perf or toplev. All values are printed on a single line.')
-ap.add_argument('inputfile', type=argparse.FileType('r'), default=sys.stdin, nargs='?')
-ap.add_argument('--output', '-o', type=argparse.FileType('w'), default=sys.stdout, nargs='?')
+ap = argparse.ArgumentParser(
+    description='Normalize CSV data from perf or toplev. All values are printed on a single line.')
+ap.add_argument('inputfile', type=argparse.FileType('r'),
+                default=sys.stdin, nargs='?')
+ap.add_argument('--output', '-o', type=argparse.FileType('w'),
+                default=sys.stdout, nargs='?')
 ap.add_argument('--cpu', nargs='?', help='Only output for this cpu')
-ap.add_argument('--na', nargs='?', help='Value to use if data is not available', default="")
+ap.add_argument('--na', nargs='?',
+                help='Value to use if data is not available', default="")
 args = ap.parse_args()
 
 printed_header = False
@@ -68,6 +71,7 @@ if res and not (args.cpu and cpu != args.cpu):
     times.append(timestamp)
     cpus.append(cpu)
 
+
 def resolve(row, ind):
     if ind >= len(row):
         return args.na
@@ -76,10 +80,10 @@ def resolve(row, ind):
         return args.na
     return v
 
-keys = events.keys()
+
+keys = list(events.keys())
 writer.writerow(["Timestamp"] + (["CPU"] if cpu is not None else []) + keys)
 for row, ts, cpunum in zip(out, times, cpus):
     writer.writerow([ts] +
-                ([cpunum] if cpu is not None else []) +
-                ([resolve(row, events[x]) for x in keys]))
-
+                    ([cpunum] if cpu is not None else []) +
+                    ([resolve(row, events[x]) for x in keys]))

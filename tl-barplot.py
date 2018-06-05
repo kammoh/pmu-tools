@@ -9,17 +9,22 @@ import gen_level
 import tldata
 import re
 
+
 def parse_args():
-    p = argparse.ArgumentParser(usage='plot toplev -I...  -x, output as bar plot')
+    p = argparse.ArgumentParser(
+        usage='plot toplev -I...  -x, output as bar plot')
     p.add_argument('file', help='CSV file to plot')
     p.add_argument('--output', '-o', help='Save figure to file (.pdf/.png/etc). Otherwise show.',
-                      nargs='?')
-    p.add_argument('--verbose', '-v', help='Plot all data values even if below threshold', action='store_true')
-    p.add_argument('--xkcd', help='Enable XKCD mode (with new matplotlib). Please install Humor Sans.', action='store_true')
+                   nargs='?')
+    p.add_argument('--verbose', '-v',
+                   help='Plot all data values even if below threshold', action='store_true')
+    p.add_argument(
+        '--xkcd', help='Enable XKCD mode (with new matplotlib). Please install Humor Sans.', action='store_true')
     p.add_argument('--title', help='Set title of plot', nargs='?')
     p.add_argument('--quiet', help='Be quiet', action='store_true')
-    p.add_argument('--cpu', help='CPU to plot (by default first)') # XXX
+    p.add_argument('--cpu', help='CPU to plot (by default first)')  # XXX
     return p.parse_args()
+
 
 args = parse_args()
 
@@ -27,7 +32,7 @@ try:
     import brewer2mpl
 except ImportError:
     if not args.quiet:
-        print "pip install brewer2mpl for better colors"
+        print("pip install brewer2mpl for better colors")
 
 if args.xkcd:
     plt.xkcd()
@@ -46,8 +51,10 @@ elif len(data.cpus) > 0:
 else:
     cpu = None
 
+
 def cpumatch(x, match, base):
     return x.startswith(cpu) or x == base
+
 
 if cpu:
     base = None
@@ -55,7 +62,7 @@ if cpu:
     if m:
         base = m.group(0)
     aliases = [x for x in data.cpus if cpumatch(x, cpu, base)]
-    print "plotting cpus:", " ".join(sorted(aliases))
+    print(("plotting cpus:", " ".join(sorted(aliases))))
 else:
     aliases = []
 if len(aliases) == 0:
@@ -68,27 +75,32 @@ for h in data.headers:
                 return d[(h, c)]
         return float('nan')
 
-    ratios[h] = map(findval, data.vals)
+    ratios[h] = list(map(findval, data.vals))
+
 
 def valid_row(r):
     s = sum(r)
-    #if sum([0 if math.isnan(x) else 1 for x in r]) < len(r)/80.:
+    # if sum([0 if math.isnan(x) else 1 for x in r]) < len(r)/80.:
     #    return False
     return s != 0.0 and s != float('nan')
+
 
 def get_colors(non_null):
     if 'brewer2mpl' in globals():
         num_color = max(min(len(non_null), 11), 3)
-        all_colors = brewer2mpl.get_map('Spectral', 'Diverging', num_color).hex_colors
+        all_colors = brewer2mpl.get_map(
+            'Spectral', 'Diverging', num_color).hex_colors
     else:
         all_colors = None
     return all_colors
 
+
 def set_title(ax, t):
     try:
-        ax.set_title(t, { 'fontsize': 6 }, loc='right')
+        ax.set_title(t, {'fontsize': 6}, loc='right')
     except AttributeError:
         ax.set_title(t)
+
 
 def suffix(x):
     dot = x.rfind('.')
@@ -96,8 +108,9 @@ def suffix(x):
         return x[dot+1:]
     return x
 
+
 n = 0
-numplots = len(levels.keys())
+numplots = len(list(levels.keys()))
 ax = None
 yset = False
 max_legend = 0
@@ -106,7 +119,7 @@ legend_bbox = (0., 0., -0.07, -0.03)
 legend_loc = 2
 
 for l in tldata.level_order(data):
-    non_null = [x for x in  levels[l] if valid_row(ratios[x])]
+    non_null = [x for x in levels[l] if valid_row(ratios[x])]
     if not non_null:
         n += 1
         continue
@@ -122,27 +135,29 @@ for l in tldata.level_order(data):
         leg = plt.legend(ncol=6,
                          loc=legend_loc,
                          bbox_to_anchor=legend_bbox,
-                         prop={'size':6})
+                         prop={'size': 6})
         low = min([min(ratios[x]) for x in non_null])
         high = max([max(ratios[x]) for x in non_null])
         if not math.isnan(low) and not math.isnan(high):
-            ax.yaxis.set_ticks([low, math.trunc(((high - low)/2.0)/100.)*100., high])
+            ax.yaxis.set_ticks(
+                [low, math.trunc(((high - low)/2.0)/100.)*100., high])
     else:
         stack = ax.stackplot(timestamps, *r, colors=all_colors)
         ax.set_ylim(0, 100)
         ax.yaxis.set_ticks([0., 50., 100.])
-        p = [plt.Rectangle((0, 0), 1, 1, fc=pc.get_facecolor()[0]) for pc in stack]
-        leg = plt.legend(p, map(suffix, non_null),
-                ncol=6,
-                bbox_to_anchor=legend_bbox,
-                loc=legend_loc,
-                prop={'size':6})
+        p = [plt.Rectangle((0, 0), 1, 1, fc=pc.get_facecolor()[0])
+             for pc in stack]
+        leg = plt.legend(p, list(map(suffix, non_null)),
+                         ncol=6,
+                         bbox_to_anchor=legend_bbox,
+                         loc=legend_loc,
+                         prop={'size': 6})
     leg.get_frame().set_alpha(0.5)
     for j in ax.get_xticklabels() + ax.get_yticklabels():
         j.set_fontsize(6)
     if not xaxis:
         xaxis = ax
-    #if n >= 2 and not yset and l != -1:
+    # if n >= 2 and not yset and l != -1:
     #    ax.set_ylabel('(% of execution time)')
     #    yset = True
     if n != numplots:

@@ -8,7 +8,11 @@
 # %d will be replaced with the cpu number
 # format can be offline to offline the cpu or online to online
 # Author: Andi Kleen
-import sys, os, re, argparse
+import sys
+import os
+import re
+import argparse
+
 
 def numfile(fn):
     f = open(fn, "r")
@@ -16,11 +20,13 @@ def numfile(fn):
     f.close()
     return v
 
+
 def output(p, fmt):
     if fmt:
-        print fmt % (p,)
+        print((fmt % (p,)))
     else:
-        print p
+        print(p)
+
 
 ap = argparse.ArgumentParser(description='''
 query cpu topology and print all matching cpu numbers
@@ -30,7 +36,7 @@ socket, core, thread
 or "offline" to query all offline cpus
 format is a printf format with %d
 %d will be replaced with the cpu number''',
-epilog='''
+                             epilog='''
 Examples:
 print all cores on socket 0
 cputop "socket == 0"
@@ -47,13 +53,14 @@ cputop offline online
 print all online cpus
 cputop True ''', formatter_class=argparse.RawTextHelpFormatter)
 ap.add_argument('expr', help='python expression with socket/core/thread')
-ap.add_argument('fmt', help='Output format string with %%d, or online/offline', nargs='?')
+ap.add_argument(
+    'fmt', help='Output format string with %%d, or online/offline', nargs='?')
 args = ap.parse_args()
 
 special = {
     "offline": "echo 0 > /sys/devices/system/cpu/cpu%d/online",
     "online": "echo 1 > /sys/devices/system/cpu/cpu%d/online",
-}        
+}
 
 if args.fmt in special:
     args.fmt = special[args.fmt]
@@ -85,4 +92,3 @@ for j in sorted(p.keys()):
     socket, core, thread = j
     if eval(args.expr):
         output(p[j], args.fmt)
- 

@@ -13,6 +13,7 @@ import re
 omap = dict()
 metric = dict()
 
+
 class Runner:
     def run(self, n):
         omap[n.name] = n
@@ -20,12 +21,14 @@ class Runner:
     def metric(self, n):
         metric[n.name] = n
 
+
 def clean_name(name):
     name = name.strip()
     dot = name.rfind(".")
     if dot >= 0:
         name = name[dot + 1:]
     return name
+
 
 def find_obj(name):
     if name in omap:
@@ -36,15 +39,17 @@ def find_obj(name):
         return omap[name], name
     return None, name
 
+
 def get_level(name):
     name = clean_name(name)
     #oname = name
     obj, name = find_obj(name)
     if obj:
         return obj.level
-    #if name not in metric and oname not in metric:
+    # if name not in metric and oname not in metric:
     #    print "level for %s not found" % (oname)
     return 0
+
 
 def get_subplot(name):
     if name in metric:
@@ -53,12 +58,14 @@ def get_subplot(name):
             return metric[name].subplot
     return None
 
+
 # XXX move to model
 metric_unit = {
     "Latencies": "Cycles",
     "Basic_Block_Length": "Insns",
     "CPU utilization": "CPUs"
 }
+
 
 def get_unit(name):
     if name in metric:
@@ -69,14 +76,17 @@ def get_unit(name):
             return metric_unit[name]
     return None
 
+
 def is_metric(name):
     return name in metric
+
 
 # XXX: move to model
 metric_levels = {
     "L1dMissLatency": "Latencies",
     "InstPerTakenBranch": "Basic Block Length",
 }
+
 
 def level_name(name):
     if name.count(".") > 0:
@@ -91,6 +101,7 @@ def level_name(name):
     n = n.replace(" ", "_")
     return n
 
+
 runner = Runner()
 ivb_server_ratios.Setup(runner)
 skl_client_ratios.Setup(runner)
@@ -99,7 +110,9 @@ linux_metrics.Setup(runner)
 tsx_metrics.Setup(runner)
 perf_metrics.Setup(runner)
 
+
 class CPU:
     freq = 0.0
+
 
 frequency.SetupCPU(runner, CPU())

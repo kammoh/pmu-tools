@@ -11,7 +11,10 @@
 
 # Helpers
 
-print_error = lambda msg: False
+
+def print_error(msg): return False
+
+
 smt_enabled = False
 ebs_mode = False
 version = "3.4-full"
@@ -19,11 +22,13 @@ base_frequency = -1.0
 model = ""
 Memory = 0
 
+
 def handle_error(obj, msg):
     print_error(msg)
     obj.errcount += 1
     obj.val = 0
     obj.thresh = False
+
 
 def handle_error_metric(obj, msg):
     print_error(msg)
@@ -31,8 +36,8 @@ def handle_error_metric(obj, msg):
     obj.val = 0
 
 
-
 # Constants
+
 
 Pipeline_Width = 4
 Mem_L3_Weight = 7
@@ -47,220 +52,314 @@ OneBillion = 1000000000
 
 # Floating Point computational (arithmetic) Operations Count
 def FLOP_Count(self, EV, level):
-    return (1 *(EV("FP_COMP_OPS_EXE.SSE_SCALAR_SINGLE", level) + EV("FP_COMP_OPS_EXE.SSE_SCALAR_DOUBLE", level)) + 2 * EV("FP_COMP_OPS_EXE.SSE_PACKED_DOUBLE", level) + 4 *(EV("FP_COMP_OPS_EXE.SSE_PACKED_SINGLE", level) + EV("SIMD_FP_256.PACKED_DOUBLE", level)) + 8 * EV("SIMD_FP_256.PACKED_SINGLE", level))
+    return (1 * (EV("FP_COMP_OPS_EXE.SSE_SCALAR_SINGLE", level) + EV("FP_COMP_OPS_EXE.SSE_SCALAR_DOUBLE", level)) + 2 * EV("FP_COMP_OPS_EXE.SSE_PACKED_DOUBLE", level) + 4 * (EV("FP_COMP_OPS_EXE.SSE_PACKED_SINGLE", level) + EV("SIMD_FP_256.PACKED_DOUBLE", level)) + 8 * EV("SIMD_FP_256.PACKED_SINGLE", level))
+
 
 def Fetched_Uops(self, EV, level):
     return (EV("IDQ.DSB_UOPS", level) + EV("LSD.UOPS", level) + EV("IDQ.MITE_UOPS", level) + EV("IDQ.MS_UOPS", level))
 
+
 def Recovery_Cycles(self, EV, level):
     return (EV("INT_MISC.RECOVERY_CYCLES_ANY", level) / 2) if smt_enabled else EV("INT_MISC.RECOVERY_CYCLES", level)
+
 
 def Execute_Cycles(self, EV, level):
     return (EV("UOPS_DISPATCHED.CORE:c1", level) / 2) if smt_enabled else EV("UOPS_DISPATCHED.CORE:c1", level)
 
+
 def ITLB_Miss_Cycles(self, EV, level):
     return (12 * EV("ITLB_MISSES.STLB_HIT", level) + EV("ITLB_MISSES.WALK_DURATION", level))
 
+
 def Frontend_RS_Empty_Cycles(self, EV, level):
     EV("RS_EVENTS.EMPTY_CYCLES", level)
-    return EV("RS_EVENTS.EMPTY_CYCLES", level) if(self.Frontend_Latency.compute(EV)> 0.1)else 0
+    return EV("RS_EVENTS.EMPTY_CYCLES", level) if(self.Frontend_Latency.compute(EV) > 0.1)else 0
+
 
 def Cycles_3m_Ports_Utilized(self, EV, level):
     return (EV("UOPS_DISPATCHED.CORE:c3", level) / 2) if smt_enabled else EV("UOPS_DISPATCHED.THREAD:c3", level)
 
+
 def Frontend_Latency_Cycles(self, EV, level):
-    return EV(lambda EV , level : min(EV("CPU_CLK_UNHALTED.THREAD", level) , EV("IDQ_UOPS_NOT_DELIVERED.CYCLES_0_UOPS_DELIV.CORE", level)) , level )
+    return EV(lambda EV, level: min(EV("CPU_CLK_UNHALTED.THREAD", level), EV("IDQ_UOPS_NOT_DELIVERED.CYCLES_0_UOPS_DELIV.CORE", level)), level)
+
 
 def STALLS_MEM_ANY(self, EV, level):
-    return EV(lambda EV , level : min(EV("CPU_CLK_UNHALTED.THREAD", level) , EV("CYCLE_ACTIVITY.STALLS_L1D_PENDING", level)) , level )
+    return EV(lambda EV, level: min(EV("CPU_CLK_UNHALTED.THREAD", level), EV("CYCLE_ACTIVITY.STALLS_L1D_PENDING", level)), level)
+
 
 def STALLS_TOTAL(self, EV, level):
-    return EV(lambda EV , level : min(EV("CPU_CLK_UNHALTED.THREAD", level) , EV("CYCLE_ACTIVITY.CYCLES_NO_DISPATCH", level)) , level )
+    return EV(lambda EV, level: min(EV("CPU_CLK_UNHALTED.THREAD", level), EV("CYCLE_ACTIVITY.CYCLES_NO_DISPATCH", level)), level)
+
 
 def ORO_DRD_Any_Cycles(self, EV, level):
-    return EV(lambda EV , level : min(EV("CPU_CLK_UNHALTED.THREAD", level) , EV("OFFCORE_REQUESTS_OUTSTANDING.CYCLES_WITH_DATA_RD", level)) , level )
+    return EV(lambda EV, level: min(EV("CPU_CLK_UNHALTED.THREAD", level), EV("OFFCORE_REQUESTS_OUTSTANDING.CYCLES_WITH_DATA_RD", level)), level)
+
 
 def ORO_DRD_BW_Cycles(self, EV, level):
-    return EV(lambda EV , level : min(EV("CPU_CLK_UNHALTED.THREAD", level) , EV("OFFCORE_REQUESTS_OUTSTANDING.ALL_DATA_RD:c6", level)) , level )
+    return EV(lambda EV, level: min(EV("CPU_CLK_UNHALTED.THREAD", level), EV("OFFCORE_REQUESTS_OUTSTANDING.ALL_DATA_RD:c6", level)), level)
+
 
 def Store_L2_Hit_Cycles(self, EV, level):
     return 0
 
+
 def LOAD_L1_MISS(self, EV, level):
     return 0
+
 
 def LOAD_L1_MISS_NET(self, EV, level):
     return 0
 
+
 def LOAD_L2_HIT(self, EV, level):
     return 0
+
 
 def Few_Uops_Executed_Threshold(self, EV, level):
     EV("UOPS_DISPATCHED.THREAD:c3", level)
     EV("UOPS_DISPATCHED.THREAD:c2", level)
-    return EV("UOPS_DISPATCHED.THREAD:c3", level) if(IPC(self, EV, level)> 1.8)else EV("UOPS_DISPATCHED.THREAD:c2", level)
+    return EV("UOPS_DISPATCHED.THREAD:c3", level) if(IPC(self, EV, level) > 1.8)else EV("UOPS_DISPATCHED.THREAD:c2", level)
+
 
 def Backend_Bound_Cycles(self, EV, level):
     return (STALLS_TOTAL(self, EV, level) + EV("UOPS_DISPATCHED.THREAD:c1", level) - Few_Uops_Executed_Threshold(self, EV, level) - Frontend_RS_Empty_Cycles(self, EV, level) + EV("RESOURCE_STALLS.SB", level))
 
+
 def Memory_Bound_Fraction(self, EV, level):
     return (STALLS_MEM_ANY(self, EV, level) + EV("RESOURCE_STALLS.SB", level)) / Backend_Bound_Cycles(self, EV, level)
 
+
 def Mem_L3_Hit_Fraction(self, EV, level):
-    return EV("MEM_LOAD_UOPS_RETIRED.LLC_HIT", level) /(EV("MEM_LOAD_UOPS_RETIRED.LLC_HIT", level) + Mem_L3_Weight * EV("MEM_LOAD_UOPS_MISC_RETIRED.LLC_MISS", level))
+    return EV("MEM_LOAD_UOPS_RETIRED.LLC_HIT", level) / (EV("MEM_LOAD_UOPS_RETIRED.LLC_HIT", level) + Mem_L3_Weight * EV("MEM_LOAD_UOPS_MISC_RETIRED.LLC_MISS", level))
+
 
 def Mispred_Clears_Fraction(self, EV, level):
-    return EV("BR_MISP_RETIRED.ALL_BRANCHES", level) /(EV("BR_MISP_RETIRED.ALL_BRANCHES", level) + EV("MACHINE_CLEARS.COUNT", level))
+    return EV("BR_MISP_RETIRED.ALL_BRANCHES", level) / (EV("BR_MISP_RETIRED.ALL_BRANCHES", level) + EV("MACHINE_CLEARS.COUNT", level))
+
 
 def Retire_Uop_Fraction(self, EV, level):
     return EV("UOPS_RETIRED.RETIRE_SLOTS", level) / EV("UOPS_ISSUED.ANY", level)
 
+
 def DurationTimeInSeconds(self, EV, level):
-    return 0 if 0 > 0 else(EV("interval-ms", 0) / 1000 )
+    return 0 if 0 > 0 else(EV("interval-ms", 0) / 1000)
+
 
 def r2r_delta(self, EV, level):
     return max_delta_clk
+
 
 def HighIPC(self, EV, level):
     return IPC(self, EV, level) / Pipeline_Width
 
 # Instructions Per Cycle (per logical thread)
+
+
 def IPC(self, EV, level):
     return EV("INST_RETIRED.ANY", level) / CLKS(self, EV, level)
 
 # Uops Per Instruction
+
+
 def UPI(self, EV, level):
     return EV("UOPS_RETIRED.RETIRE_SLOTS", level) / EV("INST_RETIRED.ANY", level)
 
 # Rough Estimation of fraction of fetched lines bytes that were likely (includes speculatively fetches) consumed by program instructions
+
+
 def IFetch_Line_Utilization(self, EV, level):
-    return min(1 , EV("UOPS_ISSUED.ANY", level) /(UPI(self, EV, level)* 32 *(EV("ICACHE.HIT", level) + EV("ICACHE.MISSES", level)) / 4))
+    return min(1, EV("UOPS_ISSUED.ANY", level) / (UPI(self, EV, level) * 32 * (EV("ICACHE.HIT", level) + EV("ICACHE.MISSES", level)) / 4))
 
 # Fraction of Uops delivered by the DSB (aka Decoded ICache; or Uop Cache). See section 'Decoded ICache' in Optimization Manual. http://www.intel.com/content/www/us/en/architecture-and-technology/64-ia-32-architectures-optimization-manual.html
+
+
 def DSB_Coverage(self, EV, level):
     return EV("IDQ.DSB_UOPS", level) / Fetched_Uops(self, EV, level)
 
 # Fraction of Uops delivered by the LSD (Loop Stream Detector; aka Loop Cache)
+
+
 def LSD_Coverage(self, EV, level):
     return EV("LSD.UOPS", level) / Fetched_Uops(self, EV, level)
 
 # Cycles Per Instruction (threaded)
+
+
 def CPI(self, EV, level):
     return 1 / IPC(self, EV, level)
 
 # Per-thread actual clocks when the logical processor is active.
+
+
 def CLKS(self, EV, level):
     return EV("CPU_CLK_UNHALTED.THREAD", level)
 
 # Total issue-pipeline slots (per-core)
+
+
 def SLOTS(self, EV, level):
     return Pipeline_Width * CORE_CLKS(self, EV, level)
 
 # Total number of retired Instructions
+
+
 def Instructions(self, EV, level):
     return EV("INST_RETIRED.ANY", level)
 
 # Instructions Per Cycle (per physical core)
+
+
 def CoreIPC(self, EV, level):
     return EV("INST_RETIRED.ANY", level) / CORE_CLKS(self, EV, level)
 
 # Floating Point Operations Per Cycle
+
+
 def FLOPc(self, EV, level):
     return FLOP_Count(self, EV, level) / CORE_CLKS(self, EV, level)
 
 # Instruction-Level-Parallelism (average number of uops executed when there is at least 1 uop executed)
+
+
 def ILP(self, EV, level):
     return EV("UOPS_DISPATCHED.THREAD", level) / Execute_Cycles(self, EV, level)
 
 # Branch Misprediction Cost: Fraction of TopDown slots wasted per non-speculative branch misprediction (jeclear)
+
+
 def Branch_Misprediction_Cost(self, EV, level):
     return 0
 
 # Core actual clocks when any thread is active on the physical core
+
+
 def CORE_CLKS(self, EV, level):
     return ((EV("CPU_CLK_UNHALTED.THREAD", level) / 2)*(1 + EV("CPU_CLK_UNHALTED.ONE_THREAD_ACTIVE", level) / EV("CPU_CLK_UNHALTED.REF_XCLK", level))) if ebs_mode else(EV("CPU_CLK_UNHALTED.THREAD_ANY", level) / 2) if smt_enabled else CLKS(self, EV, level)
 
 # Actual Average Latency for L1 data-cache miss demand loads (in core cycles)
+
+
 def Load_Miss_Real_Latency(self, EV, level):
     return 0
 
 # Memory-Level-Parallelism (average number of L1 miss demand load when there is at least one such miss. Per-thread)
+
+
 def MLP(self, EV, level):
     return 0
 
 # Utilization of the core's Page Walker(s) serving STLB misses triggered by instruction/Load/Store accesses
+
+
 def Page_Walks_Utilization(self, EV, level):
     return 0
 
 # Average data fill bandwidth to the L1 data cache [GB / sec]
+
+
 def L1D_Cache_Fill_BW(self, EV, level):
     return 0
 
 # Average data fill bandwidth to the L2 cache [GB / sec]
+
+
 def L2_Cache_Fill_BW(self, EV, level):
     return 0
 
 # L1 cache true misses per kilo instruction for demand loads
+
+
 def L1MPKI(self, EV, level):
     return 0
 
 # L2 cache true misses per kilo instruction for demand loads
+
+
 def L2MPKI(self, EV, level):
     return 0
 
 # L3 cache true misses per kilo instruction for demand loads
+
+
 def L3MPKI(self, EV, level):
     return 0
 
 # Average CPU Utilization
+
+
 def CPU_Utilization(self, EV, level):
     return EV("CPU_CLK_UNHALTED.REF_TSC", level) / EV("msr/tsc/", 0)
 
 # Measured Average Frequency for unhalted processors [GHz]
+
+
 def Average_Frequency(self, EV, level):
     return base_frequency * Turbo_Utilization(self, EV, level) / 1000
 
 # Giga Floating Point Operations Per Second
+
+
 def GFLOPs(self, EV, level):
     return (FLOP_Count(self, EV, level) / OneBillion) / EV("interval-s", 0)
 
 # Average Frequency Utilization relative nominal frequency
+
+
 def Turbo_Utilization(self, EV, level):
     return CLKS(self, EV, level) / EV("CPU_CLK_UNHALTED.REF_TSC", level)
 
 # Fraction of cycles where both hardware threads were active
+
+
 def SMT_2T_Utilization(self, EV, level):
-    return 1 - EV("CPU_CLK_THREAD_UNHALTED.ONE_THREAD_ACTIVE", level) /(EV("CPU_CLK_THREAD_UNHALTED.REF_XCLK_ANY", level) / 2) if smt_enabled else 0
+    return 1 - EV("CPU_CLK_THREAD_UNHALTED.ONE_THREAD_ACTIVE", level) / (EV("CPU_CLK_THREAD_UNHALTED.REF_XCLK_ANY", level) / 2) if smt_enabled else 0
 
 # Fraction of cycles spent in Kernel mode
+
+
 def Kernel_Utilization(self, EV, level):
     return EV("CPU_CLK_UNHALTED.REF_TSC:sup", level) / EV("CPU_CLK_UNHALTED.REF_TSC", level)
 
 # Average external Memory Bandwidth Use for reads and writes [GB / sec]
+
+
 def DRAM_BW_Use(self, EV, level):
-    return 64 *(EV("UNC_ARB_TRK_REQUESTS.ALL", level) + EV("UNC_ARB_COH_TRK_REQUESTS.ALL", level)) / OneMillion / EV("interval-s", 0) / 1000
+    return 64 * (EV("UNC_ARB_TRK_REQUESTS.ALL", level) + EV("UNC_ARB_COH_TRK_REQUESTS.ALL", level)) / OneMillion / EV("interval-s", 0) / 1000
 
 # Average latency of all requests to external memory (in Uncore cycles)
+
+
 def MEM_Request_Latency(self, EV, level):
     return EV("UNC_ARB_TRK_OCCUPANCY.ALL", level) / EV("UNC_ARB_TRK_REQUESTS.ALL", level)
 
 # Average number of parallel requests to external memory. Accounts for all requests
+
+
 def MEM_Parallel_Requests(self, EV, level):
     return EV("UNC_ARB_TRK_OCCUPANCY.ALL", level) / EV("UNC_ARB_TRK_OCCUPANCY.CYCLES_WITH_ANY_REQUEST", level)
 
 # Average latency of data read request to external DRAM memory [in nanoseconds]. Accounts for demand loads and L1/L2 data-read prefetches
+
+
 def MEM_DRAM_Read_Latency(self, EV, level):
     return 0
 
 # Total package Power in Watts
+
+
 def Power(self, EV, level):
     return 0
 
 # Run duration time in seconds
+
+
 def Time(self, EV, level):
     return EV("interval-s", 0)
 
 # Socket actual clocks when any core is active on that socket
+
+
 def Socket_CLKS(self, EV, level):
     return EV("UNC_CLOCK.SOCKET", level)
 
@@ -293,13 +392,16 @@ Bound."""
     sibling = None
     server = True
     metricgroup = ['TopDownL1']
+
     def compute(self, EV):
         try:
-            self.val = EV("IDQ_UOPS_NOT_DELIVERED.CORE", 1) / SLOTS(self, EV, 1 )
+            self.val = EV("IDQ_UOPS_NOT_DELIVERED.CORE", 1) / \
+                SLOTS(self, EV, 1)
             self.thresh = (self.val > 0.2)
         except ZeroDivisionError:
             handle_error(self, "Frontend_Bound zero division")
         return self.val
+
 
 class Frontend_Latency:
     name = "Frontend_Latency"
@@ -319,13 +421,16 @@ some period."""
     sibling = None
     server = True
     metricgroup = ['Frontend_Bound', 'TopDownL2']
+
     def compute(self, EV):
         try:
-            self.val = Pipeline_Width * Frontend_Latency_Cycles(self, EV, 2) / SLOTS(self, EV, 2 )
+            self.val = Pipeline_Width * \
+                Frontend_Latency_Cycles(self, EV, 2) / SLOTS(self, EV, 2)
             self.thresh = (self.val > 0.15) & self.parent.thresh
         except ZeroDivisionError:
             handle_error(self, "Frontend_Latency zero division")
         return self.val
+
 
 class ICache_Misses:
     name = "ICache_Misses"
@@ -343,6 +448,7 @@ through improved hot code layout."""
     sibling = None
     server = True
     metricgroup = ['Frontend_Latency']
+
     def compute(self, EV):
         try:
             self.val = 0
@@ -350,6 +456,7 @@ through improved hot code layout."""
         except ZeroDivisionError:
             handle_error(self, "ICache_Misses zero division")
         return self.val
+
 
 class ITLB_Misses:
     name = "ITLB_Misses"
@@ -371,13 +478,15 @@ applications-2/"""
     sibling = None
     server = True
     metricgroup = ['Frontend_Latency', 'TLB']
+
     def compute(self, EV):
         try:
-            self.val = ITLB_Miss_Cycles(self, EV, 3) / CLKS(self, EV, 3 )
+            self.val = ITLB_Miss_Cycles(self, EV, 3) / CLKS(self, EV, 3)
             self.thresh = (self.val > 0.05) & self.parent.thresh
         except ZeroDivisionError:
             handle_error(self, "ITLB_Misses zero division")
         return self.val
+
 
 class Branch_Resteers:
     name = "Branch_Resteers"
@@ -398,13 +507,16 @@ this node may overlap with its siblings."""
     sibling = None
     server = True
     metricgroup = ['Bad_Speculation', 'Frontend_Latency']
+
     def compute(self, EV):
         try:
-            self.val = BAClear_Cost *(EV("BR_MISP_RETIRED.ALL_BRANCHES", 3) + EV("MACHINE_CLEARS.COUNT", 3) + EV("BACLEARS.ANY", 3)) / CLKS(self, EV, 3 )
+            self.val = BAClear_Cost * (EV("BR_MISP_RETIRED.ALL_BRANCHES", 3) + EV(
+                "MACHINE_CLEARS.COUNT", 3) + EV("BACLEARS.ANY", 3)) / CLKS(self, EV, 3)
             self.thresh = (self.val > 0.05) & self.parent.thresh
         except ZeroDivisionError:
             handle_error(self, "Branch_Resteers zero division")
         return self.val
+
 
 class Mispredicts_Resteers:
     name = "Mispredicts_Resteers"
@@ -421,6 +533,7 @@ Misprediction at execution stage."""
     sibling = None
     server = False
     metricgroup = ['Branch_Mispredicts']
+
     def compute(self, EV):
         try:
             self.val = 0
@@ -428,6 +541,7 @@ Misprediction at execution stage."""
         except ZeroDivisionError:
             handle_error(self, "Mispredicts_Resteers zero division")
         return self.val
+
 
 class Clears_Resteers:
     name = "Clears_Resteers"
@@ -444,6 +558,7 @@ Clears."""
     sibling = None
     server = False
     metricgroup = ['Machine_Clears']
+
     def compute(self, EV):
         try:
             self.val = 0
@@ -451,6 +566,7 @@ Clears."""
         except ZeroDivisionError:
             handle_error(self, "Clears_Resteers zero division")
         return self.val
+
 
 class Unknown_Branches:
     name = "Unknown_Branches"
@@ -468,6 +584,7 @@ branches the Branch Prediction Unit was unable to recognize
     sibling = None
     server = False
     metricgroup = ['Unknown_Branches']
+
     def compute(self, EV):
         try:
             self.val = 0
@@ -475,6 +592,7 @@ branches the Branch Prediction Unit was unable to recognize
         except ZeroDivisionError:
             handle_error(self, "Unknown_Branches zero division")
         return self.val
+
 
 class DSB_Switches:
     name = "DSB_Switches"
@@ -500,13 +618,16 @@ technology/64-ia-32-architectures-optimization-manual.html"""
     sibling = None
     server = True
     metricgroup = ['DSB', 'Frontend_Latency']
+
     def compute(self, EV):
         try:
-            self.val = EV("DSB2MITE_SWITCHES.PENALTY_CYCLES", 3) / CLKS(self, EV, 3 )
+            self.val = EV("DSB2MITE_SWITCHES.PENALTY_CYCLES",
+                          3) / CLKS(self, EV, 3)
             self.thresh = (self.val > 0.05) & self.parent.thresh
         except ZeroDivisionError:
             handle_error(self, "DSB_Switches zero division")
         return self.val
+
 
 class LCP:
     name = "LCP"
@@ -524,13 +645,15 @@ avoid this."""
     sibling = None
     server = True
     metricgroup = ['Frontend_Latency']
+
     def compute(self, EV):
         try:
-            self.val = EV("ILD_STALL.LCP", 3) / CLKS(self, EV, 3 )
+            self.val = EV("ILD_STALL.LCP", 3) / CLKS(self, EV, 3)
             self.thresh = (self.val > 0.05) & self.parent.thresh
         except ZeroDivisionError:
             handle_error(self, "LCP zero division")
         return self.val
+
 
 class MS_Switches:
     name = "MS_Switches"
@@ -556,13 +679,16 @@ when dealing with Denormals."""
     sibling = None
     server = True
     metricgroup = ['Frontend_Latency', 'Microcode_Sequencer']
+
     def compute(self, EV):
         try:
-            self.val = MS_Switches_Cost * EV("IDQ.MS_SWITCHES", 3) / CLKS(self, EV, 3 )
+            self.val = MS_Switches_Cost * \
+                EV("IDQ.MS_SWITCHES", 3) / CLKS(self, EV, 3)
             self.thresh = (self.val > 0.05) & self.parent.thresh
         except ZeroDivisionError:
             handle_error(self, "MS_Switches zero division")
         return self.val
+
 
 class Frontend_Bandwidth:
     name = "Frontend_Bandwidth"
@@ -583,13 +709,17 @@ the Backend (less than four)."""
     sibling = None
     server = True
     metricgroup = ['Frontend_Bound', 'TopDownL2']
+
     def compute(self, EV):
         try:
-            self.val = self.Frontend_Bound.compute(EV) - self.Frontend_Latency.compute(EV )
-            self.thresh = (self.val > 0.1) & self.parent.thresh & (HighIPC(self, EV, 2) > 0)
+            self.val = self.Frontend_Bound.compute(
+                EV) - self.Frontend_Latency.compute(EV)
+            self.thresh = (self.val > 0.1) & self.parent.thresh & (
+                HighIPC(self, EV, 2) > 0)
         except ZeroDivisionError:
             handle_error(self, "Frontend_Bandwidth zero division")
         return self.val
+
 
 class Bad_Speculation:
     name = "Bad_Speculation"
@@ -611,13 +741,16 @@ Ordering Nukes is another example."""
     sibling = None
     server = True
     metricgroup = ['Bad_Speculation', 'TopDownL1']
+
     def compute(self, EV):
         try:
-            self.val = (EV("UOPS_ISSUED.ANY", 1) - EV("UOPS_RETIRED.RETIRE_SLOTS", 1) + Pipeline_Width * Recovery_Cycles(self, EV, 1)) / SLOTS(self, EV, 1 )
+            self.val = (EV("UOPS_ISSUED.ANY", 1) - EV("UOPS_RETIRED.RETIRE_SLOTS", 1) +
+                        Pipeline_Width * Recovery_Cycles(self, EV, 1)) / SLOTS(self, EV, 1)
             self.thresh = (self.val > 0.1)
         except ZeroDivisionError:
             handle_error(self, "Bad_Speculation zero division")
         return self.val
+
 
 class Branch_Mispredicts:
     name = "Branch_Mispredicts"
@@ -641,13 +774,16 @@ technology/64-ia-32-architectures-optimization-manual.html"""
     sibling = None
     server = True
     metricgroup = ['Bad_Speculation', 'Branch_Mispredicts', 'TopDownL2']
+
     def compute(self, EV):
         try:
-            self.val = Mispred_Clears_Fraction(self, EV, 2)* self.Bad_Speculation.compute(EV )
+            self.val = Mispred_Clears_Fraction(
+                self, EV, 2) * self.Bad_Speculation.compute(EV)
             self.thresh = (self.val > 0.05) & self.parent.thresh
         except ZeroDivisionError:
             handle_error(self, "Branch_Mispredicts zero division")
         return self.val
+
 
 class Machine_Clears:
     name = "Machine_Clears"
@@ -670,13 +806,16 @@ m/d/4/1/d/8/sma.pdf"""
     sibling = None
     server = True
     metricgroup = ['Bad_Speculation', 'Machine_Clears', 'TopDownL2']
+
     def compute(self, EV):
         try:
-            self.val = self.Bad_Speculation.compute(EV) - self.Branch_Mispredicts.compute(EV )
+            self.val = self.Bad_Speculation.compute(
+                EV) - self.Branch_Mispredicts.compute(EV)
             self.thresh = (self.val > 0.05) & self.parent.thresh
         except ZeroDivisionError:
             handle_error(self, "Machine_Clears zero division")
         return self.val
+
 
 class Backend_Bound:
     name = "Backend_Bound"
@@ -701,13 +840,16 @@ Bound."""
     sibling = None
     server = True
     metricgroup = ['TopDownL1']
+
     def compute(self, EV):
         try:
-            self.val = 1 -(self.Frontend_Bound.compute(EV) + self.Bad_Speculation.compute(EV) + self.Retiring.compute(EV))
+            self.val = 1 - (self.Frontend_Bound.compute(EV) +
+                            self.Bad_Speculation.compute(EV) + self.Retiring.compute(EV))
             self.thresh = (self.val > 0.1)
         except ZeroDivisionError:
             handle_error(self, "Backend_Bound zero division")
         return self.val
+
 
 class Memory_Bound:
     name = "Memory_Bound"
@@ -730,13 +872,16 @@ pipeline when many of them get buffered at the same time
     sibling = None
     server = True
     metricgroup = ['Backend_Bound', 'TopDownL2']
+
     def compute(self, EV):
         try:
-            self.val = Memory_Bound_Fraction(self, EV, 2)* self.Backend_Bound.compute(EV )
+            self.val = Memory_Bound_Fraction(
+                self, EV, 2) * self.Backend_Bound.compute(EV)
             self.thresh = (self.val > 0.1) & self.parent.thresh
         except ZeroDivisionError:
             handle_error(self, "Memory_Bound zero division")
         return self.val
+
 
 class L1_Bound:
     name = "L1_Bound"
@@ -754,11 +899,13 @@ while some non-completed demand load lives in the machine
 without having that demand load missing the L1 cache."""
     level = 3
     htoff = False
-    sample = ['MEM_LOAD_UOPS_RETIRED.L1_HIT:pp', 'MEM_LOAD_UOPS_RETIRED.HIT_LFB:pp']
+    sample = ['MEM_LOAD_UOPS_RETIRED.L1_HIT:pp',
+              'MEM_LOAD_UOPS_RETIRED.HIT_LFB:pp']
     errcount = 0
     sibling = None
     server = True
     metricgroup = ['Cache_Misses', 'Memory_Bound']
+
     def compute(self, EV):
         try:
             self.val = 0
@@ -766,6 +913,7 @@ without having that demand load missing the L1 cache."""
         except ZeroDivisionError:
             handle_error(self, "L1_Bound zero division")
         return self.val
+
 
 class DTLB_Load:
     name = "DTLB_Load"
@@ -789,13 +937,16 @@ page walk on an STLB miss.."""
     sibling = None
     server = True
     metricgroup = ['TLB']
+
     def compute(self, EV):
         try:
-            self.val = (Mem_STLB_Hit_Cost * EV("DTLB_LOAD_MISSES.STLB_HIT", 4) + EV("DTLB_LOAD_MISSES.WALK_DURATION", 4)) / CLKS(self, EV, 4 )
+            self.val = (Mem_STLB_Hit_Cost * EV("DTLB_LOAD_MISSES.STLB_HIT", 4) +
+                        EV("DTLB_LOAD_MISSES.WALK_DURATION", 4)) / CLKS(self, EV, 4)
             self.thresh = (self.val > 0.1) & self.parent.thresh
         except ZeroDivisionError:
             handle_error(self, "DTLB_Load zero division")
         return self.val
+
 
 class Lock_Latency:
     name = "Lock_Latency"
@@ -813,6 +964,7 @@ L1_Bound regardless of what memory source satisfied them."""
     sibling = None
     server = True
     metricgroup = []
+
     def compute(self, EV):
         try:
             self.val = 0
@@ -820,6 +972,7 @@ L1_Bound regardless of what memory source satisfied them."""
         except ZeroDivisionError:
             handle_error(self, "Lock_Latency zero division")
         return self.val
+
 
 class L2_Bound:
     name = "L2_Bound"
@@ -837,6 +990,7 @@ performance."""
     sibling = None
     server = True
     metricgroup = ['Cache_Misses', 'Memory_Bound']
+
     def compute(self, EV):
         try:
             self.val = 0
@@ -844,6 +998,7 @@ performance."""
         except ZeroDivisionError:
             handle_error(self, "L2_Bound zero division")
         return self.val
+
 
 class L3_Bound:
     name = "L3_Bound"
@@ -861,13 +1016,16 @@ the latency and increase performance."""
     sibling = None
     server = True
     metricgroup = ['Cache_Misses', 'Memory_Bound']
+
     def compute(self, EV):
         try:
-            self.val = Mem_L3_Hit_Fraction(self, EV, 3)* EV("CYCLE_ACTIVITY.STALLS_L2_PENDING", 3) / CLKS(self, EV, 3 )
+            self.val = Mem_L3_Hit_Fraction(
+                self, EV, 3) * EV("CYCLE_ACTIVITY.STALLS_L2_PENDING", 3) / CLKS(self, EV, 3)
             self.thresh = (self.val > 0.05) & self.parent.thresh
         except ZeroDivisionError:
             handle_error(self, "L3_Bound zero division")
         return self.val
+
 
 class DRAM_Bound:
     name = "DRAM_Bound"
@@ -884,13 +1042,16 @@ can improve the latency and increase performance."""
     sibling = None
     server = True
     metricgroup = ['Memory_Bound']
+
     def compute(self, EV):
         try:
-            self.val = (1 - Mem_L3_Hit_Fraction(self, EV, 3))* EV("CYCLE_ACTIVITY.STALLS_L2_PENDING", 3) / CLKS(self, EV, 3 )
+            self.val = (1 - Mem_L3_Hit_Fraction(self, EV, 3)) * \
+                EV("CYCLE_ACTIVITY.STALLS_L2_PENDING", 3) / CLKS(self, EV, 3)
             self.thresh = (self.val > 0.1) & self.parent.thresh
         except ZeroDivisionError:
             handle_error(self, "DRAM_Bound zero division")
         return self.val
+
 
 class MEM_Bandwidth:
     name = "MEM_Bandwidth"
@@ -920,13 +1081,15 @@ prefetches will not help BW-limited application.."""
     sibling = None
     server = True
     metricgroup = ['Memory_BW']
+
     def compute(self, EV):
         try:
-            self.val = ORO_DRD_BW_Cycles(self, EV, 4) / CLKS(self, EV, 4 )
+            self.val = ORO_DRD_BW_Cycles(self, EV, 4) / CLKS(self, EV, 4)
             self.thresh = (self.val > 0.1) & self.parent.thresh
         except ZeroDivisionError:
             handle_error(self, "MEM_Bandwidth zero division")
         return self.val
+
 
 class MEM_Latency:
     name = "MEM_Latency"
@@ -947,13 +1110,16 @@ Prefetches (also through the compiler).."""
     sibling = None
     server = True
     metricgroup = ['Memory_Lat']
+
     def compute(self, EV):
         try:
-            self.val = ORO_DRD_Any_Cycles(self, EV, 4) / CLKS(self, EV, 4) - self.MEM_Bandwidth.compute(EV )
+            self.val = ORO_DRD_Any_Cycles(
+                self, EV, 4) / CLKS(self, EV, 4) - self.MEM_Bandwidth.compute(EV)
             self.thresh = (self.val > 0.1) & self.parent.thresh
         except ZeroDivisionError:
             handle_error(self, "MEM_Latency zero division")
         return self.val
+
 
 class Store_Bound:
     name = "Store_Bound"
@@ -972,13 +1138,15 @@ flagged should any of these cases be a bottleneck."""
     sibling = None
     server = True
     metricgroup = ['Memory_Bound']
+
     def compute(self, EV):
         try:
-            self.val = EV("RESOURCE_STALLS.SB", 3) / CLKS(self, EV, 3 )
+            self.val = EV("RESOURCE_STALLS.SB", 3) / CLKS(self, EV, 3)
             self.thresh = (self.val > 0.2) & self.parent.thresh
         except ZeroDivisionError:
             handle_error(self, "Store_Bound zero division")
         return self.val
+
 
 class Store_Latency:
     name = "Store_Latency"
@@ -999,6 +1167,7 @@ easily load-able/computable) memory store."""
     sibling = None
     server = True
     metricgroup = ['Memory_Lat']
+
     def compute(self, EV):
         try:
             self.val = 0
@@ -1006,6 +1175,7 @@ easily load-able/computable) memory store."""
         except ZeroDivisionError:
             handle_error(self, "Store_Latency zero division")
         return self.val
+
 
 class DTLB_Store:
     name = "DTLB_Store"
@@ -1026,6 +1196,7 @@ larger page sizes for large amounts of frequently-used data."""
     sibling = None
     server = True
     metricgroup = ['TLB']
+
     def compute(self, EV):
         try:
             self.val = 0
@@ -1033,6 +1204,7 @@ larger page sizes for large amounts of frequently-used data."""
         except ZeroDivisionError:
             handle_error(self, "DTLB_Store zero division")
         return self.val
+
 
 class Core_Bound:
     name = "Core_Bound"
@@ -1056,13 +1228,16 @@ analysis as next step."""
     sibling = None
     server = True
     metricgroup = ['Backend_Bound', 'TopDownL2']
+
     def compute(self, EV):
         try:
-            self.val = self.Backend_Bound.compute(EV) - self.Memory_Bound.compute(EV )
+            self.val = self.Backend_Bound.compute(
+                EV) - self.Memory_Bound.compute(EV)
             self.thresh = (self.val > 0.1) & self.parent.thresh
         except ZeroDivisionError:
             handle_error(self, "Core_Bound zero division")
         return self.val
+
 
 class Divider:
     name = "Divider"
@@ -1081,13 +1256,15 @@ subtraction; or multiplication."""
     sibling = None
     server = True
     metricgroup = []
+
     def compute(self, EV):
         try:
-            self.val = EV("ARITH.FPU_DIV_ACTIVE", 3) / CORE_CLKS(self, EV, 3 )
+            self.val = EV("ARITH.FPU_DIV_ACTIVE", 3) / CORE_CLKS(self, EV, 3)
             self.thresh = (self.val > 0.2) & self.parent.thresh
         except ZeroDivisionError:
             handle_error(self, "Divider zero division")
         return self.val
+
 
 class Ports_Utilization:
     name = "Ports_Utilization"
@@ -1113,13 +1290,16 @@ same uop."""
     sibling = None
     server = True
     metricgroup = []
+
     def compute(self, EV):
         try:
-            self.val = (Backend_Bound_Cycles(self, EV, 3) - EV("RESOURCE_STALLS.SB", 3) - STALLS_MEM_ANY(self, EV, 3)) / CLKS(self, EV, 3 )
+            self.val = (Backend_Bound_Cycles(self, EV, 3) - EV("RESOURCE_STALLS.SB",
+                                                               3) - STALLS_MEM_ANY(self, EV, 3)) / CLKS(self, EV, 3)
             self.thresh = (self.val > 0.2) & self.parent.thresh
         except ZeroDivisionError:
             handle_error(self, "Ports_Utilization zero division")
         return self.val
+
 
 class G0_Ports_Utilized:
     name = "0_Ports_Utilized"
@@ -1140,6 +1320,7 @@ technology/64-ia-32-architectures-optimization-manual.html"""
     sibling = None
     server = True
     metricgroup = ['Ports_Utilization']
+
     def compute(self, EV):
         try:
             self.val = 0
@@ -1147,6 +1328,7 @@ technology/64-ia-32-architectures-optimization-manual.html"""
         except ZeroDivisionError:
             handle_error(self, "G0_Ports_Utilized zero division")
         return self.val
+
 
 class Serializing_Operation:
     name = "Serializing_Operation"
@@ -1164,6 +1346,7 @@ of-order execution which may limit performance."""
     sibling = None
     server = True
     metricgroup = []
+
     def compute(self, EV):
         try:
             self.val = 0
@@ -1171,6 +1354,7 @@ of-order execution which may limit performance."""
         except ZeroDivisionError:
             handle_error(self, "Serializing_Operation zero division")
         return self.val
+
 
 class G1_Port_Utilized:
     name = "1_Port_Utilized"
@@ -1195,6 +1379,7 @@ as next step."""
     sibling = None
     server = True
     metricgroup = ['Ports_Utilization']
+
     def compute(self, EV):
         try:
             self.val = 0
@@ -1202,6 +1387,7 @@ as next step."""
         except ZeroDivisionError:
             handle_error(self, "G1_Port_Utilized zero division")
         return self.val
+
 
 class G2_Ports_Utilized:
     name = "2_Ports_Utilized"
@@ -1222,6 +1408,7 @@ same uop."""
     sibling = None
     server = True
     metricgroup = ['Ports_Utilization']
+
     def compute(self, EV):
         try:
             self.val = 0
@@ -1229,6 +1416,7 @@ same uop."""
         except ZeroDivisionError:
             handle_error(self, "G2_Ports_Utilized zero division")
         return self.val
+
 
 class G3m_Ports_Utilized:
     name = "3m_Ports_Utilized"
@@ -1246,6 +1434,7 @@ step"""
     sibling = None
     server = True
     metricgroup = ['Ports_Utilization']
+
     def compute(self, EV):
         try:
             self.val = 0
@@ -1253,6 +1442,7 @@ step"""
         except ZeroDivisionError:
             handle_error(self, "G3m_Ports_Utilized zero division")
         return self.val
+
 
 class Retiring:
     name = "Retiring"
@@ -1281,13 +1471,15 @@ improving the performance."""
     sibling = None
     server = True
     metricgroup = ['TopDownL1']
+
     def compute(self, EV):
         try:
-            self.val = EV("UOPS_RETIRED.RETIRE_SLOTS", 1) / SLOTS(self, EV, 1 )
+            self.val = EV("UOPS_RETIRED.RETIRE_SLOTS", 1) / SLOTS(self, EV, 1)
             self.thresh = (self.val > 0.75) | self.Microcode_Sequencer.thresh
         except ZeroDivisionError:
             handle_error(self, "Retiring zero division")
         return self.val
+
 
 class Base:
     name = "Base"
@@ -1311,13 +1503,16 @@ such as vectorization."""
     sibling = None
     server = True
     metricgroup = ['TopDownL2']
+
     def compute(self, EV):
         try:
-            self.val = self.Retiring.compute(EV) - self.Microcode_Sequencer.compute(EV )
+            self.val = self.Retiring.compute(
+                EV) - self.Microcode_Sequencer.compute(EV)
             self.thresh = (self.val > 0.6) & self.parent.thresh
         except ZeroDivisionError:
             handle_error(self, "Base zero division")
         return self.val
+
 
 class FP_Arith:
     name = "FP_Arith"
@@ -1333,13 +1528,16 @@ This metric represents overall arithmetic floating-point
     sibling = None
     server = True
     metricgroup = ['Retiring']
+
     def compute(self, EV):
         try:
-            self.val = self.X87_Use.compute(EV) + self.FP_Scalar.compute(EV) + self.FP_Vector.compute(EV )
+            self.val = self.X87_Use.compute(
+                EV) + self.FP_Scalar.compute(EV) + self.FP_Vector.compute(EV)
             self.thresh = (self.val > 0.2) & self.parent.thresh
         except ZeroDivisionError:
             handle_error(self, "FP_Arith zero division")
         return self.val
+
 
 class X87_Use:
     name = "X87_Use"
@@ -1360,13 +1558,16 @@ vectors."""
     sibling = None
     server = True
     metricgroup = []
+
     def compute(self, EV):
         try:
-            self.val = EV("FP_COMP_OPS_EXE.X87", 4) / EV("UOPS_DISPATCHED.THREAD", 4 )
+            self.val = EV("FP_COMP_OPS_EXE.X87", 4) / \
+                EV("UOPS_DISPATCHED.THREAD", 4)
             self.thresh = (self.val > 0.1) & self.parent.thresh
         except ZeroDivisionError:
             handle_error(self, "X87_Use zero division")
         return self.val
+
 
 class FP_Scalar:
     name = "FP_Scalar"
@@ -1383,13 +1584,16 @@ what limits (compiler) generation of vector code."""
     sibling = None
     server = True
     metricgroup = ['FLOPS']
+
     def compute(self, EV):
         try:
-            self.val = (EV("FP_COMP_OPS_EXE.SSE_SCALAR_SINGLE", 4) + EV("FP_COMP_OPS_EXE.SSE_SCALAR_DOUBLE", 4)) / EV("UOPS_DISPATCHED.THREAD", 4 )
+            self.val = (EV("FP_COMP_OPS_EXE.SSE_SCALAR_SINGLE", 4) + EV(
+                "FP_COMP_OPS_EXE.SSE_SCALAR_DOUBLE", 4)) / EV("UOPS_DISPATCHED.THREAD", 4)
             self.thresh = (self.val > 0.1) & self.parent.thresh
         except ZeroDivisionError:
             handle_error(self, "FP_Scalar zero division")
         return self.val
+
 
 class FP_Vector:
     name = "FP_Vector"
@@ -1406,13 +1610,16 @@ across all vector widths.. Check if vector width is expected"""
     sibling = None
     server = True
     metricgroup = ['FLOPS']
+
     def compute(self, EV):
         try:
-            self.val = (EV("FP_COMP_OPS_EXE.SSE_PACKED_DOUBLE", 4) + EV("FP_COMP_OPS_EXE.SSE_PACKED_SINGLE", 4) + EV("SIMD_FP_256.PACKED_SINGLE", 4) + EV("SIMD_FP_256.PACKED_DOUBLE", 4)) / EV("UOPS_DISPATCHED.THREAD", 4 )
+            self.val = (EV("FP_COMP_OPS_EXE.SSE_PACKED_DOUBLE", 4) + EV("FP_COMP_OPS_EXE.SSE_PACKED_SINGLE", 4) + EV(
+                "SIMD_FP_256.PACKED_SINGLE", 4) + EV("SIMD_FP_256.PACKED_DOUBLE", 4)) / EV("UOPS_DISPATCHED.THREAD", 4)
             self.thresh = (self.val > 0.2) & self.parent.thresh
         except ZeroDivisionError:
             handle_error(self, "FP_Vector zero division")
         return self.val
+
 
 class Other:
     name = "Other"
@@ -1430,13 +1637,15 @@ Cycle); this node will likely be biggest fraction."""
     sibling = None
     server = True
     metricgroup = []
+
     def compute(self, EV):
         try:
-            self.val = 1 - self.FP_Arith.compute(EV )
+            self.val = 1 - self.FP_Arith.compute(EV)
             self.thresh = (self.val > 0.3) & self.parent.thresh
         except ZeroDivisionError:
             handle_error(self, "Other zero division")
         return self.val
+
 
 class Microcode_Sequencer:
     name = "Microcode_Sequencer"
@@ -1457,13 +1666,16 @@ avoided.."""
     sibling = None
     server = True
     metricgroup = ['Microcode_Sequencer', 'Retiring', 'TopDownL2']
+
     def compute(self, EV):
         try:
-            self.val = Retire_Uop_Fraction(self, EV, 2)* EV("IDQ.MS_UOPS", 2) / SLOTS(self, EV, 2 )
+            self.val = Retire_Uop_Fraction(
+                self, EV, 2) * EV("IDQ.MS_UOPS", 2) / SLOTS(self, EV, 2)
             self.thresh = (self.val > 0.05)
         except ZeroDivisionError:
             handle_error(self, "Microcode_Sequencer zero division")
         return self.val
+
 
 class Assists:
     name = "Assists"
@@ -1490,6 +1702,7 @@ cases."""
     sibling = None
     server = False
     metricgroup = []
+
     def compute(self, EV):
         try:
             self.val = 0
@@ -1497,6 +1710,7 @@ cases."""
         except ZeroDivisionError:
             handle_error(self, "Assists zero division")
         return self.val
+
 
 class Metric_IPC:
     name = "IPC"
@@ -1739,7 +1953,8 @@ per non-speculative branch misprediction (jeclear)"""
         try:
             self.val = Branch_Misprediction_Cost(self, EV, 0)
         except ZeroDivisionError:
-            handle_error_metric(self, "Branch_Misprediction_Cost zero division")
+            handle_error_metric(
+                self, "Branch_Misprediction_Cost zero division")
 
 
 class Metric_CORE_CLKS:
@@ -2150,55 +2365,144 @@ Socket actual clocks when any core is active on that socket"""
 # Schedule
 
 
-
 class Setup:
     def __init__(self, r):
         o = dict()
-        n = Frontend_Bound() ; r.run(n) ; o["Frontend_Bound"] = n
-        n = Frontend_Latency() ; r.run(n) ; o["Frontend_Latency"] = n
-        n = ICache_Misses() ; r.run(n) ; o["ICache_Misses"] = n
-        n = ITLB_Misses() ; r.run(n) ; o["ITLB_Misses"] = n
-        n = Branch_Resteers() ; r.run(n) ; o["Branch_Resteers"] = n
-        n = Mispredicts_Resteers() ; r.run(n) ; o["Mispredicts_Resteers"] = n
-        n = Clears_Resteers() ; r.run(n) ; o["Clears_Resteers"] = n
-        n = Unknown_Branches() ; r.run(n) ; o["Unknown_Branches"] = n
-        n = DSB_Switches() ; r.run(n) ; o["DSB_Switches"] = n
-        n = LCP() ; r.run(n) ; o["LCP"] = n
-        n = MS_Switches() ; r.run(n) ; o["MS_Switches"] = n
-        n = Frontend_Bandwidth() ; r.run(n) ; o["Frontend_Bandwidth"] = n
-        n = Bad_Speculation() ; r.run(n) ; o["Bad_Speculation"] = n
-        n = Branch_Mispredicts() ; r.run(n) ; o["Branch_Mispredicts"] = n
-        n = Machine_Clears() ; r.run(n) ; o["Machine_Clears"] = n
-        n = Backend_Bound() ; r.run(n) ; o["Backend_Bound"] = n
-        n = Memory_Bound() ; r.run(n) ; o["Memory_Bound"] = n
-        n = L1_Bound() ; r.run(n) ; o["L1_Bound"] = n
-        n = DTLB_Load() ; r.run(n) ; o["DTLB_Load"] = n
-        n = Lock_Latency() ; r.run(n) ; o["Lock_Latency"] = n
-        n = L2_Bound() ; r.run(n) ; o["L2_Bound"] = n
-        n = L3_Bound() ; r.run(n) ; o["L3_Bound"] = n
-        n = DRAM_Bound() ; r.run(n) ; o["DRAM_Bound"] = n
-        n = MEM_Bandwidth() ; r.run(n) ; o["MEM_Bandwidth"] = n
-        n = MEM_Latency() ; r.run(n) ; o["MEM_Latency"] = n
-        n = Store_Bound() ; r.run(n) ; o["Store_Bound"] = n
-        n = Store_Latency() ; r.run(n) ; o["Store_Latency"] = n
-        n = DTLB_Store() ; r.run(n) ; o["DTLB_Store"] = n
-        n = Core_Bound() ; r.run(n) ; o["Core_Bound"] = n
-        n = Divider() ; r.run(n) ; o["Divider"] = n
-        n = Ports_Utilization() ; r.run(n) ; o["Ports_Utilization"] = n
-        n = G0_Ports_Utilized() ; r.run(n) ; o["G0_Ports_Utilized"] = n
-        n = Serializing_Operation() ; r.run(n) ; o["Serializing_Operation"] = n
-        n = G1_Port_Utilized() ; r.run(n) ; o["G1_Port_Utilized"] = n
-        n = G2_Ports_Utilized() ; r.run(n) ; o["G2_Ports_Utilized"] = n
-        n = G3m_Ports_Utilized() ; r.run(n) ; o["G3m_Ports_Utilized"] = n
-        n = Retiring() ; r.run(n) ; o["Retiring"] = n
-        n = Base() ; r.run(n) ; o["Base"] = n
-        n = FP_Arith() ; r.run(n) ; o["FP_Arith"] = n
-        n = X87_Use() ; r.run(n) ; o["X87_Use"] = n
-        n = FP_Scalar() ; r.run(n) ; o["FP_Scalar"] = n
-        n = FP_Vector() ; r.run(n) ; o["FP_Vector"] = n
-        n = Other() ; r.run(n) ; o["Other"] = n
-        n = Microcode_Sequencer() ; r.run(n) ; o["Microcode_Sequencer"] = n
-        n = Assists() ; r.run(n) ; o["Assists"] = n
+        n = Frontend_Bound()
+        r.run(n)
+        o["Frontend_Bound"] = n
+        n = Frontend_Latency()
+        r.run(n)
+        o["Frontend_Latency"] = n
+        n = ICache_Misses()
+        r.run(n)
+        o["ICache_Misses"] = n
+        n = ITLB_Misses()
+        r.run(n)
+        o["ITLB_Misses"] = n
+        n = Branch_Resteers()
+        r.run(n)
+        o["Branch_Resteers"] = n
+        n = Mispredicts_Resteers()
+        r.run(n)
+        o["Mispredicts_Resteers"] = n
+        n = Clears_Resteers()
+        r.run(n)
+        o["Clears_Resteers"] = n
+        n = Unknown_Branches()
+        r.run(n)
+        o["Unknown_Branches"] = n
+        n = DSB_Switches()
+        r.run(n)
+        o["DSB_Switches"] = n
+        n = LCP()
+        r.run(n)
+        o["LCP"] = n
+        n = MS_Switches()
+        r.run(n)
+        o["MS_Switches"] = n
+        n = Frontend_Bandwidth()
+        r.run(n)
+        o["Frontend_Bandwidth"] = n
+        n = Bad_Speculation()
+        r.run(n)
+        o["Bad_Speculation"] = n
+        n = Branch_Mispredicts()
+        r.run(n)
+        o["Branch_Mispredicts"] = n
+        n = Machine_Clears()
+        r.run(n)
+        o["Machine_Clears"] = n
+        n = Backend_Bound()
+        r.run(n)
+        o["Backend_Bound"] = n
+        n = Memory_Bound()
+        r.run(n)
+        o["Memory_Bound"] = n
+        n = L1_Bound()
+        r.run(n)
+        o["L1_Bound"] = n
+        n = DTLB_Load()
+        r.run(n)
+        o["DTLB_Load"] = n
+        n = Lock_Latency()
+        r.run(n)
+        o["Lock_Latency"] = n
+        n = L2_Bound()
+        r.run(n)
+        o["L2_Bound"] = n
+        n = L3_Bound()
+        r.run(n)
+        o["L3_Bound"] = n
+        n = DRAM_Bound()
+        r.run(n)
+        o["DRAM_Bound"] = n
+        n = MEM_Bandwidth()
+        r.run(n)
+        o["MEM_Bandwidth"] = n
+        n = MEM_Latency()
+        r.run(n)
+        o["MEM_Latency"] = n
+        n = Store_Bound()
+        r.run(n)
+        o["Store_Bound"] = n
+        n = Store_Latency()
+        r.run(n)
+        o["Store_Latency"] = n
+        n = DTLB_Store()
+        r.run(n)
+        o["DTLB_Store"] = n
+        n = Core_Bound()
+        r.run(n)
+        o["Core_Bound"] = n
+        n = Divider()
+        r.run(n)
+        o["Divider"] = n
+        n = Ports_Utilization()
+        r.run(n)
+        o["Ports_Utilization"] = n
+        n = G0_Ports_Utilized()
+        r.run(n)
+        o["G0_Ports_Utilized"] = n
+        n = Serializing_Operation()
+        r.run(n)
+        o["Serializing_Operation"] = n
+        n = G1_Port_Utilized()
+        r.run(n)
+        o["G1_Port_Utilized"] = n
+        n = G2_Ports_Utilized()
+        r.run(n)
+        o["G2_Ports_Utilized"] = n
+        n = G3m_Ports_Utilized()
+        r.run(n)
+        o["G3m_Ports_Utilized"] = n
+        n = Retiring()
+        r.run(n)
+        o["Retiring"] = n
+        n = Base()
+        r.run(n)
+        o["Base"] = n
+        n = FP_Arith()
+        r.run(n)
+        o["FP_Arith"] = n
+        n = X87_Use()
+        r.run(n)
+        o["X87_Use"] = n
+        n = FP_Scalar()
+        r.run(n)
+        o["FP_Scalar"] = n
+        n = FP_Vector()
+        r.run(n)
+        o["FP_Vector"] = n
+        n = Other()
+        r.run(n)
+        o["Other"] = n
+        n = Microcode_Sequencer()
+        r.run(n)
+        o["Microcode_Sequencer"] = n
+        n = Assists()
+        r.run(n)
+        o["Assists"] = n
 
         # parents
 
@@ -2246,41 +2550,111 @@ class Setup:
 
         # user visible metrics
 
-        n = Metric_IPC() ; r.metric(n) ; o["IPC"] = n
-        n = Metric_UPI() ; r.metric(n) ; o["UPI"] = n
-        n = Metric_IFetch_Line_Utilization() ; r.metric(n) ; o["IFetch_Line_Utilization"] = n
-        n = Metric_DSB_Coverage() ; r.metric(n) ; o["DSB_Coverage"] = n
-        n = Metric_LSD_Coverage() ; r.metric(n) ; o["LSD_Coverage"] = n
-        n = Metric_CPI() ; r.metric(n) ; o["CPI"] = n
-        n = Metric_CLKS() ; r.metric(n) ; o["CLKS"] = n
-        n = Metric_SLOTS() ; r.metric(n) ; o["SLOTS"] = n
-        n = Metric_Instructions() ; r.metric(n) ; o["Instructions"] = n
-        n = Metric_CoreIPC() ; r.metric(n) ; o["CoreIPC"] = n
-        n = Metric_FLOPc() ; r.metric(n) ; o["FLOPc"] = n
-        n = Metric_ILP() ; r.metric(n) ; o["ILP"] = n
-        n = Metric_Branch_Misprediction_Cost() ; r.metric(n) ; o["Branch_Misprediction_Cost"] = n
-        n = Metric_CORE_CLKS() ; r.metric(n) ; o["CORE_CLKS"] = n
-        n = Metric_Load_Miss_Real_Latency() ; r.metric(n) ; o["Load_Miss_Real_Latency"] = n
-        n = Metric_MLP() ; r.metric(n) ; o["MLP"] = n
-        n = Metric_Page_Walks_Utilization() ; r.metric(n) ; o["Page_Walks_Utilization"] = n
-        n = Metric_L1D_Cache_Fill_BW() ; r.metric(n) ; o["L1D_Cache_Fill_BW"] = n
-        n = Metric_L2_Cache_Fill_BW() ; r.metric(n) ; o["L2_Cache_Fill_BW"] = n
-        n = Metric_L1MPKI() ; r.metric(n) ; o["L1MPKI"] = n
-        n = Metric_L2MPKI() ; r.metric(n) ; o["L2MPKI"] = n
-        n = Metric_L3MPKI() ; r.metric(n) ; o["L3MPKI"] = n
-        n = Metric_CPU_Utilization() ; r.metric(n) ; o["CPU_Utilization"] = n
-        n = Metric_Average_Frequency() ; r.metric(n) ; o["Average_Frequency"] = n
-        n = Metric_GFLOPs() ; r.metric(n) ; o["GFLOPs"] = n
-        n = Metric_Turbo_Utilization() ; r.metric(n) ; o["Turbo_Utilization"] = n
-        n = Metric_SMT_2T_Utilization() ; r.metric(n) ; o["SMT_2T_Utilization"] = n
-        n = Metric_Kernel_Utilization() ; r.metric(n) ; o["Kernel_Utilization"] = n
-        n = Metric_DRAM_BW_Use() ; r.metric(n) ; o["DRAM_BW_Use"] = n
-        n = Metric_MEM_Request_Latency() ; r.metric(n) ; o["MEM_Request_Latency"] = n
-        n = Metric_MEM_Parallel_Requests() ; r.metric(n) ; o["MEM_Parallel_Requests"] = n
-        n = Metric_MEM_DRAM_Read_Latency() ; r.metric(n) ; o["MEM_DRAM_Read_Latency"] = n
-        n = Metric_Power() ; r.metric(n) ; o["Power"] = n
-        n = Metric_Time() ; r.metric(n) ; o["Time"] = n
-        n = Metric_Socket_CLKS() ; r.metric(n) ; o["Socket_CLKS"] = n
+        n = Metric_IPC()
+        r.metric(n)
+        o["IPC"] = n
+        n = Metric_UPI()
+        r.metric(n)
+        o["UPI"] = n
+        n = Metric_IFetch_Line_Utilization()
+        r.metric(n)
+        o["IFetch_Line_Utilization"] = n
+        n = Metric_DSB_Coverage()
+        r.metric(n)
+        o["DSB_Coverage"] = n
+        n = Metric_LSD_Coverage()
+        r.metric(n)
+        o["LSD_Coverage"] = n
+        n = Metric_CPI()
+        r.metric(n)
+        o["CPI"] = n
+        n = Metric_CLKS()
+        r.metric(n)
+        o["CLKS"] = n
+        n = Metric_SLOTS()
+        r.metric(n)
+        o["SLOTS"] = n
+        n = Metric_Instructions()
+        r.metric(n)
+        o["Instructions"] = n
+        n = Metric_CoreIPC()
+        r.metric(n)
+        o["CoreIPC"] = n
+        n = Metric_FLOPc()
+        r.metric(n)
+        o["FLOPc"] = n
+        n = Metric_ILP()
+        r.metric(n)
+        o["ILP"] = n
+        n = Metric_Branch_Misprediction_Cost()
+        r.metric(n)
+        o["Branch_Misprediction_Cost"] = n
+        n = Metric_CORE_CLKS()
+        r.metric(n)
+        o["CORE_CLKS"] = n
+        n = Metric_Load_Miss_Real_Latency()
+        r.metric(n)
+        o["Load_Miss_Real_Latency"] = n
+        n = Metric_MLP()
+        r.metric(n)
+        o["MLP"] = n
+        n = Metric_Page_Walks_Utilization()
+        r.metric(n)
+        o["Page_Walks_Utilization"] = n
+        n = Metric_L1D_Cache_Fill_BW()
+        r.metric(n)
+        o["L1D_Cache_Fill_BW"] = n
+        n = Metric_L2_Cache_Fill_BW()
+        r.metric(n)
+        o["L2_Cache_Fill_BW"] = n
+        n = Metric_L1MPKI()
+        r.metric(n)
+        o["L1MPKI"] = n
+        n = Metric_L2MPKI()
+        r.metric(n)
+        o["L2MPKI"] = n
+        n = Metric_L3MPKI()
+        r.metric(n)
+        o["L3MPKI"] = n
+        n = Metric_CPU_Utilization()
+        r.metric(n)
+        o["CPU_Utilization"] = n
+        n = Metric_Average_Frequency()
+        r.metric(n)
+        o["Average_Frequency"] = n
+        n = Metric_GFLOPs()
+        r.metric(n)
+        o["GFLOPs"] = n
+        n = Metric_Turbo_Utilization()
+        r.metric(n)
+        o["Turbo_Utilization"] = n
+        n = Metric_SMT_2T_Utilization()
+        r.metric(n)
+        o["SMT_2T_Utilization"] = n
+        n = Metric_Kernel_Utilization()
+        r.metric(n)
+        o["Kernel_Utilization"] = n
+        n = Metric_DRAM_BW_Use()
+        r.metric(n)
+        o["DRAM_BW_Use"] = n
+        n = Metric_MEM_Request_Latency()
+        r.metric(n)
+        o["MEM_Request_Latency"] = n
+        n = Metric_MEM_Parallel_Requests()
+        r.metric(n)
+        o["MEM_Parallel_Requests"] = n
+        n = Metric_MEM_DRAM_Read_Latency()
+        r.metric(n)
+        o["MEM_DRAM_Read_Latency"] = n
+        n = Metric_Power()
+        r.metric(n)
+        o["Power"] = n
+        n = Metric_Time()
+        r.metric(n)
+        o["Time"] = n
+        n = Metric_Socket_CLKS()
+        r.metric(n)
+        o["Socket_CLKS"] = n
 
         # references between groups
 
@@ -2318,10 +2692,14 @@ class Setup:
 
         # siblings cross-tree
 
-        o["Mispredicts_Resteers"].sibling = (o["Clears_Resteers"], o["Branch_Mispredicts"],)
-        o["Clears_Resteers"].sibling = (o["Mispredicts_Resteers"], o["Branch_Mispredicts"],)
-        o["MS_Switches"].sibling = (o["Serializing_Operation"], o["Microcode_Sequencer"],)
-        o["Branch_Mispredicts"].sibling = (o["Mispredicts_Resteers"], o["Clears_Resteers"],)
+        o["Mispredicts_Resteers"].sibling = (
+            o["Clears_Resteers"], o["Branch_Mispredicts"],)
+        o["Clears_Resteers"].sibling = (
+            o["Mispredicts_Resteers"], o["Branch_Mispredicts"],)
+        o["MS_Switches"].sibling = (
+            o["Serializing_Operation"], o["Microcode_Sequencer"],)
+        o["Branch_Mispredicts"].sibling = (
+            o["Mispredicts_Resteers"], o["Clears_Resteers"],)
         o["L1_Bound"].sibling = (o["G1_Port_Utilized"],)
         o["Lock_Latency"].sibling = (o["Store_Latency"],)
         o["Store_Latency"].sibling = (o["Lock_Latency"],)

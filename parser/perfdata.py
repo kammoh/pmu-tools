@@ -607,5 +607,5 @@ if __name__ == '__main__':
 
     with open(p.file, "rb") as f:
         h = perf_file.parse_stream(f)
-        print h
+        print(h)
         #print get_events(h)

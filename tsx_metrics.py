@@ -5,8 +5,10 @@
 # XXX force all these into a single group
 # XXX: force % in caller
 
+
 def TXCycles(EV, level):
     return EV("cpu/cycles-t/", level) / EV("cycles", level)
+
 
 class TransactionalCycles:
     name = "Transactional cycles"
@@ -17,6 +19,7 @@ does not use locks (or other transactions), or the locks are not enabled with lo
     unit = "%"
     sample = ["mem_uops_retired.lock_loads"]
     server = True
+
     def compute(self, EV):
         try:
             self.val = TXCycles(EV, 1) * 100.
@@ -24,6 +27,7 @@ does not use locks (or other transactions), or the locks are not enabled with lo
         except ZeroDivisionError:
             self.val = 0
             self.thresh = False
+
 
 class AbortedCycles:
     name = "Aborted cycles"
@@ -34,13 +38,16 @@ start sampling for abort causes."""
     unit = "%"
     sample = ["cpu/tx-abort/pp", "cpu/hle-abort/pp"]
     server = True
+
     def compute(self, EV):
         try:
-            self.val = ((EV("cpu/cycles-t/", 1) - EV("cpu/cycles-ct/", 1)) / EV("cycles", 1)) * 100.
+            self.val = ((EV("cpu/cycles-t/", 1) -
+                         EV("cpu/cycles-ct/", 1)) / EV("cycles", 1)) * 100.
             self.thresh = (self.val >= 0.01)
         except ZeroDivisionError:
             self.val = 0
             self.thresh = False
+
 
 class AverageRTM:
     name = "Average RTM transaction length"
@@ -50,6 +57,7 @@ When low consider increasing the size of the critical sections to lower overhead
     subplot = "TSX Latencies"
     unit = "cycles"
     server = True
+
     def compute(self, EV):
         try:
             self.val = EV("cpu/cycles-t/", 1) / EV("RTM_RETIRED.START", 1)
@@ -58,6 +66,7 @@ When low consider increasing the size of the critical sections to lower overhead
             self.val = 0
             self.thresh = False
 
+
 class AverageHLE:
     name = "Average HLE transaction length"
     desc = """
@@ -65,6 +74,7 @@ Average HLE transaction length. Assumes most transactions are HLE.
 When low consider increasing the size of the critical sections to lower overhead."""
     subplot = "TSX Latencies"
     unit = "cycles"
+
     def compute(self, EV):
         try:
             self.val = EV("cpu/cycles-t/", 1) / EV("HLE_RETIRED.START", 1)
@@ -73,10 +83,10 @@ When low consider increasing the size of the critical sections to lower overhead
             self.val = 0
             self.thresh = False
 
+
 class Setup:
     def __init__(self, r):
         r.metric(TransactionalCycles())
         r.metric(AbortedCycles())
         r.metric(AverageRTM())
         r.metric(AverageHLE())
-

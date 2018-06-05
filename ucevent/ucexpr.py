@@ -82,7 +82,7 @@ def tokenize(eq, box, user_mode=False):
     eq = re.sub(r"\.([a-z])", r" . \1", eq) 
     eq = re.sub(r"([=<>])  \1", r"\1\1", eq)
     eq = re.sub(r"([<>])  =", r"\1=", eq)
-    return map(lambda x: fix_token(x, box, user_mode), eq.split())
+    return [fix_token(x, box, user_mode) for x in eq.split()]
 
 # expand event lists to multiple boxes after parsing
 # this avoids having to pass this all around the parser
@@ -122,11 +122,11 @@ def convert_qual(q, v):
     return (q, v)
 
 def is_ev(l):
-    return isinstance(l, basestring) and l.startswith("EV(")
+    return isinstance(l, str) and l.startswith("EV(")
 
 def apply_expr(o, fl, vl):
     if is_list(o):
-        return map(lambda x: apply_expr(x, fl, vl), o)
+        return [apply_expr(x, fl, vl) for x in o]
     if is_ev(o):
         for f, v in zip(fl, vl):
             nn, nv = convert_qual(f, v)
@@ -158,9 +158,9 @@ def apply_list(o, fl, vl):
             for k in j:
                 n = k.split('=')
                 o = apply_expr(o, [n[0]], [n[1]])
-    fl = filter(lambda x: not is_list(x), fl)
+    fl = [x for x in fl if not is_list(x)]
     if len(fl) != len(vl):
-        print "MISMATCHED APPLY",fl,vl,o,inspect.stack()[1][2:]
+        print(("MISMATCHED APPLY",fl,vl,o,inspect.stack()[1][2:]))
         return o
     if not has_ev(o):
         evo = []
@@ -362,17 +362,17 @@ def expr_flat(e):
 def apply_one_user_qual(x, qual):
     if not x.startswith("EV("):
         return x
-    if any(map(lambda r: re.search(r, x), ucevent.cpu_aux.clockticks)):
+    if any([re.search(r, x) for r in ucevent.cpu_aux.clockticks]):
         return x
     return x.replace("/'", "," + qual + "/'")
 
 def apply_user_qual(e, qual):
-    return map(lambda x: apply_one_user_qual(x, qual), e)
+    return [apply_one_user_qual(x, qual) for x in e]
 
 def parse(s, box, quiet=False, user_mode=False, qual=None):
     try:
         if not quiet:
-            print "Expression", s
+            print(("Expression", s))
         tl = tokenize(s, box, user_mode)
         dbg("tokenize", tl)
         e, tl = expr(tl)
@@ -387,11 +387,11 @@ def parse(s, box, quiet=False, user_mode=False, qual=None):
         dbg("expanded", tl)
         return res
     except ParseError as p:
-        print "PARSE-ERROR", p.msg
+        print(("PARSE-ERROR", p.msg))
         return []
 
 if __name__ == '__main__':
     assert is_id("x")
-    print parse("a + b + c", "foo")
-    print parse("a with:x=1 + (b with:.{o}=(1) + c with:{edge}) with:{x=1,y=2} + d", "foo")
+    print((parse("a + b + c", "foo")))
+    print((parse("a with:x=1 + (b with:.{o}=(1) + c with:{edge}) with:{x=1,y=2} + d", "foo")))
 

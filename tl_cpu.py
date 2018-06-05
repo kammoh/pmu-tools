@@ -21,6 +21,7 @@ modelid_map = {
     (0x9e, ): "CFL",
 }
 
+
 def num_offline_cpus():
     cpus = glob.glob("/sys/devices/system/cpu/cpu[0-9]*/online")
     offline = 0
@@ -30,9 +31,11 @@ def num_offline_cpus():
                 offline += 1
     return offline
 
+
 class CPU:
     """Detect the CPU."""
     # overrides for easy regression tests
+
     def force_cpu(self, known_cpus):
         force = os.getenv("FORCECPU")
         if not force:
@@ -43,7 +46,7 @@ class CPU:
                 self.cpu = i[0]
                 break
         if self.cpu is None:
-            print "Unknown FORCECPU ",force
+            print(("Unknown FORCECPU ", force))
         return True
 
     def force_counters(self):
@@ -150,7 +153,7 @@ class CPU:
             counters = os.getenv("TLCOUNTERS")
             if counters:
                 self.counters = int(counters)
-        self.sockets = len(sockets.keys())
+        self.sockets = len(list(sockets.keys()))
         self.modelid = None
         mid = (self.model,)
         if mid in modelid_map:

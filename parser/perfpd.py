@@ -139,7 +139,7 @@ def samples_to_df(h, need_line):
             add('callchain', id)
         if 'branch_stack' in j and j.branch_stack:
             branch = j.branch_stack.branch
-            id = branches.add(map(lambda x: (x['from'], x.to), branch),
+            id = branches.add([(x['from'], x.to) for x in branch],
                     lambda: resolve_branch(branch, j, mm, need_line))
             add('branch', id)
         kernel, guest, hv = cpumodes[j['cpumode']]
@@ -152,7 +152,7 @@ def samples_to_df(h, need_line):
                     used[name] += 1
                 data[name].append(j[name])
         index.append(int(j["time"]))
-    for j in data.keys():
+    for j in list(data.keys()):
         if used[j] == 0:
             del data[j]
     df = pd.DataFrame(data, index=index, dtype=np.uint64)
@@ -183,7 +183,7 @@ if __name__ == '__main__':
     df, _, _ = read_samples(p.file)
     if p.repl:
         import code
-        print df
+        print(df)
         code.interact(banner='perf.data is in df', local=locals())
         sys.exit(0)
 
@@ -192,12 +192,12 @@ if __name__ == '__main__':
             from IPython.terminal.embed import InteractiveShellEmbed
         except NameError:
             sys.exit("Ipython not installed")
-        print df
+        print(df)
         ipshell = InteractiveShellEmbed(banner1="perf.data is in df")
         ipshell()
         sys.exit(0)
 
-    print df
-    print df['filename'].value_counts()
-    print df['symbol'].value_counts()
-    print df['line'].value_counts()
+    print(df)
+    print((df['filename'].value_counts()))
+    print((df['symbol'].value_counts()))
+    print((df['line'].value_counts()))

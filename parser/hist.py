@@ -17,7 +17,7 @@ COLUMN_PAD = 5
 MAX_COLUMN = 70
 
 def compute_cols(names):
-    return min(max(map(len, names)) + COLUMN_PAD, MAX_COLUMN)
+    return min(max(list(map(len, names))) + COLUMN_PAD, MAX_COLUMN)
 
 min_percent = float(args.min_percent) / 100.0
 for d in args.datafiles:
@@ -37,4 +37,4 @@ for d in args.datafiles:
 
     cols = compute_cols(h.index)
     for s, v in zip(h.index, h.values):
-        print "%-*s %.2f%%" % (cols, s, v*100.0)
+        print(("%-*s %.2f%%" % (cols, s, v*100.0)))

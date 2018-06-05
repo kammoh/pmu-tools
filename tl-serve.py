@@ -5,7 +5,7 @@
 
 import string
 import argparse
-import BaseHTTPServer
+import http.server
 import csv
 import gen_level
 import re
@@ -13,11 +13,15 @@ import os
 import itertools
 import tldata
 
-ap = argparse.ArgumentParser(usage="Serve toplev csv file as http or generate in directory")
+ap = argparse.ArgumentParser(
+    usage="Serve toplev csv file as http or generate in directory")
 ap.add_argument('csvfile', help='toplev csv file to serve')
-ap.add_argument('host', nargs='?', default="localhost", help='Hostname to bind to (default localhost)')
-ap.add_argument('port', nargs='?', default="9001", type=int, help='Port to bind to (default 9001)')
-ap.add_argument('--verbose', '-v', action='store_true', help='Display all metrics, even if below threshold')
+ap.add_argument('host', nargs='?', default="localhost",
+                help='Hostname to bind to (default localhost)')
+ap.add_argument('port', nargs='?', default="9001", type=int,
+                help='Port to bind to (default 9001)')
+ap.add_argument('--verbose', '-v', action='store_true',
+                help='Display all metrics, even if below threshold')
 ap.add_argument('--gen', help='Generate HTML files in specified directory')
 ap.add_argument('--title', help='Title for output')
 args = ap.parse_args()
@@ -27,11 +31,14 @@ T = string.Template
 data = tldata.TLData(args.csvfile, args.verbose)
 data.update()
 
+
 def jsname(n):
     return n.replace(".", "_").replace("-", "_")
 
+
 def comma_strings(l):
     return ",".join(['"%s"' % (x) for x in l])
+
 
 def gen_html_header():
     graph = """<html><head><title>Toplev</title>
@@ -181,16 +188,17 @@ help_$name = {
 """).substitute({"name": jsname(j)})
         for i in data.levels[j]:
             if i not in data.helptxt:
-                #print i,"not found in",data.helptxt.keys()
+                # print i,"not found in",data.helptxt.keys()
                 continue
             graph += T("""
         "$name": "$help",
-        """).substitute({"name": get_postfix(i), "help": data.helptxt[i] })
+        """).substitute({"name": get_postfix(i), "help": data.helptxt[i]})
         graph += """
 }
 </script>
 """
     return graph
+
 
 def gen_html_cpu(cpu):
     lev = tldata.level_order(data)
@@ -200,7 +208,7 @@ def gen_html_cpu(cpu):
             "title": name + " " + cpu,
             "width": 1000,
             "height": 180,
-            #"xlabel": "time",
+            # "xlabel": "time",
         }
 
         if name in data.metrics:
@@ -232,6 +240,7 @@ def gen_html_cpu(cpu):
                 """).substitute({"name": name, "jname": jsname(name), "file": name, "cpu": cpu, "opts": opts})
     return graph
 
+
 def gen_html():
     graph = gen_html_header()
     for cpu in sorted(data.cpus):
@@ -241,20 +250,24 @@ def gen_html():
 </html>"""
     return graph
 
+
 def get_postfix(s):
     m = re.match(r'.*\.(.*)', s)
     if m:
         return m.group(1)
     return s
 
+
 def gencsv(wfile, l, cpu):
     hdr = sorted(data.levels[l])
     wr = csv.writer(wfile)
-    wr.writerow(["Timestamp"] + map(get_postfix, hdr))
+    wr.writerow(["Timestamp"] + list(map(get_postfix, hdr)))
     for val, ts in zip(data.vals, data.times):
-        wr.writerow([ts] + [val[(x, cpu)] if (x, cpu) in val else "" for x in hdr])
+        wr.writerow([ts] + [val[(x, cpu)] if (x, cpu)
+                            in val else "" for x in hdr])
 
-class TLHandler(BaseHTTPServer.BaseHTTPRequestHandler):
+
+class TLHandler(http.server.BaseHTTPRequestHandler):
     def header(self, type):
         self.send_response(200)
         self.send_header('Content-Type', type)
@@ -281,7 +294,8 @@ class TLHandler(BaseHTTPServer.BaseHTTPRequestHandler):
             self.serve_file("toplev.ico", "image/x-icon")
         elif self.path.endswith(".csv"):
             data.update()
-            m = re.match(r"/(cpu|C\d+|S\d+-C\d+|C\d+-T\d+)\.(.*?)\.csv", self.path)
+            m = re.match(
+                r"/(cpu|C\d+|S\d+-C\d+|C\d+-T\d+)\.(.*?)\.csv", self.path)
             if not m:
                 self.bad()
                 return
@@ -295,10 +309,12 @@ class TLHandler(BaseHTTPServer.BaseHTTPRequestHandler):
         else:
             self.bad()
 
+
 def copyfile(a, b):
     with open(a, "r") as af:
         with open(b, "w") as bf:
             bf.write(af.read())
+
 
 if args.gen:
     if not os.path.isdir(args.gen):
@@ -312,11 +328,11 @@ if args.gen:
         for l in data.levels:
             with open(genfn(args.gen, cpu + "." + l + ".csv"), 'w') as f:
                 gencsv(f, l, cpu)
-    print "Please browse", args.gen, "through a web server, not through file:"
+    print(("Please browse", args.gen, "through a web server, not through file:"))
 else:
-    httpd = BaseHTTPServer.HTTPServer((args.host, args.port), TLHandler)
+    httpd = http.server.HTTPServer((args.host, args.port), TLHandler)
 
-    print "serving at",args.host,"port",args.port,"until Ctrl-C"
+    print(("serving at", args.host, "port", args.port, "until Ctrl-C"))
     try:
         httpd.serve_forever()
     except KeyboardInterrupt:

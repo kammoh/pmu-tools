@@ -4,6 +4,7 @@ from collections import defaultdict
 import csv
 import re
 
+
 class TLData:
     """Read a toplev output CSV file.
 
@@ -65,7 +66,10 @@ class TLData:
             self.levels[n].add(name)
             prevts = ts
 
-early_plots = ["TopLevel", "CPU utilization", "Power", "Frequency", "CPU-METRIC"]
+
+early_plots = ["TopLevel", "CPU utilization",
+               "Power", "Frequency", "CPU-METRIC"]
+
 
 def sort_pos(i, data):
     if i in early_plots:
@@ -74,12 +78,14 @@ def sort_pos(i, data):
         return 30
     return 20
 
+
 def cmp_level(a, b, data):
     ap, bp = sort_pos(a, data), sort_pos(b, data)
     if ap != bp:
         return ap - bp
     return cmp(a, b)
 
+
 def level_order(data):
     """Return plot order of all levels."""
-    return sorted(data.levels.keys(), cmp=lambda a, b: cmp_level(a, b, data))
+    return sorted(list(data.levels.keys()), cmp=lambda a, b: cmp_level(a, b, data))

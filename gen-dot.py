@@ -14,8 +14,10 @@ else:
     import ivb_client_ratios
     m = ivb_client_ratios
 
+
 def has(obj, name):
     return name in obj.__class__.__dict__
+
 
 class Runner:
     def __init__(self):
@@ -31,18 +33,17 @@ class Runner:
     def finish(self):
         for n in self.olist:
             if n.level == 1:
-                print '"%s";' % (n.name)
+                print('"%s";' % (n.name))
             elif n.parent:
-                print '"%s" -> "%s";' % (n.parent.name, n.name)
-            #if n.sibling:
+                print('"%s" -> "%s";' % (n.parent.name, n.name))
+            # if n.sibling:
             #    print '"%s" -> "%s";' % (n.name, n.sibling.name)
+
 
 runner = Runner()
 m.Setup(runner)
-print >>sys.stderr, runner.olist
-print "digraph {"
-print "fontname=\"Courier\";"
+print(runner.olist, file=sys.stderr)
+print("digraph {")
+print("fontname=\"Courier\";")
 runner.finish()
-print "}"
-
-
+print("}")

@@ -7,9 +7,9 @@ quiet = False
 debug = None
 
 def debug_msg(x, y):
-    if debug and any(map(lambda p: fnmatch.fnmatch(x, p), debug.split(","))):
-        print >>sys.stderr, "debug:", x + ": " + str(y)
+    if debug and any([fnmatch.fnmatch(x, p) for p in debug.split(",")]):
+        print("debug:", x + ": " + str(y), file=sys.stderr)
 
 def warning(x):
     if not quiet:
-        print >>sys.stderr, "WARNING:", x
+        print("WARNING:", x, file=sys.stderr)
